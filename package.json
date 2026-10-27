@@ -1,0 +1,30 @@
+{
+  "name": "ms-integracion-super",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest --project unit",
+    "test:integration": "vitest run --project integration"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "@scalar/nextjs-api-reference": "^0.12.11",
+    "next": "16.4.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@next/env": "16.4.2",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "1.0.0",
+    "typescript": "^5",
+    "vitest": "^5.0.5"
+  },
+  "packageManager": "pnpm@11.24.0"
+}
