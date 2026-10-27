@@ -11,7 +11,7 @@ Servicio construido con **Next.js 16 (App Router)**, **React 19** y **TypeScript
 
 ```bash
 pnpm install              # instala dependencias
-pnpm dev                  # servidor de desarrollo en http://localhost:3000
+pnpm dev                  # aplica las migraciones pendientes y levanta el servidor en http://localhost:3000
 pnpm build                # build de producción (incluye verificación de tipos)
 pnpm start                # sirve el build de producción
 pnpm exec tsc --noEmit    # solo verificación de tipos
@@ -31,6 +31,27 @@ El test que crea una solicitud en Mi Súper se omite por defecto, para no llenar
 
 1. Completa `tests/integration/fixtures/crear-solicitud-request.fixture.ts` con datos válidos.
 2. Ejecuta `MISUPER_INTEGRATION_CREAR_SOLICITUD=true pnpm test:integration`.
+
+## Base de datos
+
+PostgreSQL con [Drizzle ORM](https://orm.drizzle.team). Todas las tablas viven en el esquema `super`, incluido el historial de migraciones (`super.__drizzle_migrations`). Las tablas se definen en `src/core/repository/entity/` y las consultas en `src/core/repository/dao/`.
+
+```bash
+pnpm db:generate --name <cambio>   # genera la migración SQL a partir de las entidades
+pnpm db:migrate                    # aplica las migraciones pendientes en DATABASE_URL
+pnpm db:studio                     # explorador web de la base de datos
+```
+
+`pnpm dev` ejecuta `db:migrate` antes de levantar el servidor. `pnpm start` no lo hace: en cada despliegue hay que ejecutar `pnpm db:migrate` antes de iniciar la aplicación.
+
+La carpeta `drizzle/` es el historial de migraciones y se versiona en git. Cada cambio de esquema se hace modificando las entidades y ejecutando `db:generate`.
+
+Tablas actuales:
+
+| Tabla | Columnas | Notas |
+|---|---|---|
+| `procesos` | `codigo` (PK), `nombre` | El código se asigna al insertar |
+| `actividades` | `id` (PK autogenerada), `nombre`, `proceso_codigo` (FK) | Cada actividad pertenece a un único proceso |
 
 ## Variables de entorno
 
@@ -52,7 +73,7 @@ app/api/<endpoint>/route.ts      Capa de exposición: valida la entrada (Zod) y 
 service/<feature>/*.service.ts   Capa de servicio: orquesta la lógica y llama a los repositorios
     │
     ▼
-core/repository/*.repository.ts  Capa de datos: acceso a datos (en el futuro, conexión a la BD)
+core/repository/dao/*.dao.ts     Capa de datos: consultas a PostgreSQL con Drizzle
 
 core/domain/<feature>/           Dominio: entidades, reglas de negocio y errores; lo pueden usar todas las capas
 ```
@@ -76,11 +97,15 @@ src/
 │   ├── globals.css
 │   └── favicon.ico              (Next.js lo exige aquí)
 ├── config/
-│   └── env.config.ts            Acceso a las variables de entorno (EnvConfig)
+│   ├── env.config.ts            Acceso a las variables de entorno (EnvConfig)
+│   └── db.config.ts             Conexión a PostgreSQL (Drizzle)
 ├── core/
 │   ├── domain/                  Clases de dominio y reglas de negocio
 │   └── repository/              Acceso a datos
+│       ├── entity/              Tablas (una entidad por archivo) y relaciones
+│       └── dao/                 Consultas sobre cada entidad
 └── service/                     Servicios de orquestación
+drizzle/                         Historial de migraciones SQL (generado con pnpm db:generate)
 ```
 
 ### Responsabilidades por capa
