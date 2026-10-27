@@ -4,7 +4,7 @@ Servicio construido con **Next.js 16 (App Router)**, **React 19** y **TypeScript
 
 ## Requisitos
 
-- Node.js 20 o superior
+- Node.js 22.12 o superior (lo exige Vitest 5)
 - [pnpm](https://pnpm.io) (la versión está fijada en `packageManager` de `package.json`)
 
 ## Comandos
@@ -15,7 +15,26 @@ pnpm dev                  # servidor de desarrollo en http://localhost:3000
 pnpm build                # build de producción (incluye verificación de tipos)
 pnpm start                # sirve el build de producción
 pnpm exec tsc --noEmit    # solo verificación de tipos
+pnpm test                 # tests unitarios con Vitest en modo watch
+pnpm test --run           # tests unitarios una vez
+pnpm test:integration     # tests de integración contra la API real de Mi Súper
 ```
+
+### Tests
+
+Los tests (`*.test.ts`) están en la carpeta `tests/`, separados en dos grupos que replican la estructura de `src/`:
+
+- **`tests/unit/`**: no usan red ni el `.env`. Los servicios reciben dependencias falsas y las variables se definen con `vi.stubEnv`.
+- **`tests/integration/`**: llaman a los servicios reales con las variables del `.env`, que apunta al ambiente de QA de Mi Súper.
+
+El test que crea una solicitud en Mi Súper se omite por defecto, para no llenar QA de registros en cada ejecución. Para ejecutarlo:
+
+1. Completa `tests/integration/fixtures/crear-solicitud-request.fixture.ts` con datos válidos.
+2. Ejecuta `MISUPER_INTEGRATION_CREAR_SOLICITUD=true pnpm test:integration`.
+
+## Variables de entorno
+
+Copia `.env.example` a `.env` y completa los valores. El código accede a ellas solo a través de `EnvConfig` (`src/config/env.config.ts`). Si falta una variable, se lanza un error con su nombre al usarla.
 
 ## Arquitectura
 
@@ -56,6 +75,8 @@ src/
 │   ├── layout.tsx               Layout raíz (Next.js lo exige aquí)
 │   ├── globals.css
 │   └── favicon.ico              (Next.js lo exige aquí)
+├── config/
+│   └── env.config.ts            Acceso a las variables de entorno (EnvConfig)
 ├── core/
 │   ├── domain/                  Clases de dominio y reglas de negocio
 │   └── repository/              Acceso a datos
