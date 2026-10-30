@@ -15,6 +15,10 @@ export class EnvConfig {
   static get miSuperChileAtiendeId(): string {
     return requireEnv("MISUPER_CHILE_ATIENDE_ID");
   }
+
+  static get databaseUrl(): string {
+    return requireEnv("DATABASE_URL");
+  }
 }
 
 function requireEnv(name: string): string {

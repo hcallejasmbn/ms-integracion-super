@@ -65,4 +65,21 @@ describe("SuperService.crearSolicitud", () => {
     );
     expect(getResponse).not.toHaveBeenCalled();
   });
+
+  it("no envía la solicitud si Mi Súper no entrega el token", async () => {
+    createRequest.mockRejectedValue(new MiSuperApiError(401, '{"detail":"credencial inválida"}'));
+
+    await expect(superService.crearSolicitud(solicitud)).rejects.toMatchObject({ status: 401 });
+    expect(getResponse).not.toHaveBeenCalled();
+  });
+
+  it("entrega el detalle que devuelve Mi Súper al rechazar la solicitud", async () => {
+    getResponse.mockRejectedValue(new MiSuperApiError(422, '{"detail":"cup duplicado"}'));
+
+    await expect(superService.crearSolicitud(solicitud)).rejects.toMatchObject({
+      name: "MiSuperApiError",
+      status: 422,
+      body: '{"detail":"cup duplicado"}',
+    });
+  });
 });
