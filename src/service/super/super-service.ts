@@ -14,4 +14,8 @@ export class SuperService {
       request,
     );
   }
+
+  async updateSolicitud(): Promise<String> {
+    return "null";
+  }
 }
