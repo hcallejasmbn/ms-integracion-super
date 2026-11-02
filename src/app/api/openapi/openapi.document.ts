@@ -3,8 +3,7 @@ import { registerSolicitudesPaths } from "../super/solicitudes/solicitudes.schem
 
 const registry = new OpenAPIRegistry();
 
-// Registrar aquí los paths de cada endpoint nuevo.
-// /api/hello es solo el ejemplo de referencia y no se publica en la documentación
+// Registrar aquí los paths de cada endpoint nuevo
 registerSolicitudesPaths(registry);
 
 export const openApiDocument = new OpenApiGeneratorV31(registry.definitions).generateDocument({

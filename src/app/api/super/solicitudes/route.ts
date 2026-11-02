@@ -1,7 +1,7 @@
-import { MiSuperNoDisponibleError, SolicitudRechazadaError } from "@/core/domain/solicitud/solicitud.errors";
+import { after } from "next/server";
 import { SuperService } from "@/service/super/super-service";
 import type { ErrorResponse } from "../../openapi/common.schema";
-import { NuevaSolicitudSchema, type SolicitudCreadaResponse } from "./solicitudes.schema";
+import { NuevaSolicitudSchema, type SolicitudAceptadaResponse } from "./solicitudes.schema";
 
 const superService = new SuperService();
 
@@ -19,22 +19,24 @@ export async function POST(request: Request) {
     return errorResponse(400, `${issue.path.join(".") || "body"}: ${issue.message}`);
   }
 
-  try {
-    const solicitud = await superService.crearSolicitud(body.data);
-    const response: SolicitudCreadaResponse = {
-      idSolicitudMiSuper: solicitud.idSolicitudMiSuper,
-      mensaje: solicitud.mensaje,
-    };
-    return Response.json(response, { status: 201 });
-  } catch (error) {
-    if (error instanceof SolicitudRechazadaError) {
-      return errorResponse(422, error.message);
-    }
-    if (error instanceof MiSuperNoDisponibleError) {
-      return errorResponse(502, error.message);
-    }
-    throw error;
+  const solicitud = body.data;
+  if (await superService.existeSolicitud(solicitud.idSolicitudServicio)) {
+    return errorResponse(409, `El expediente ${solicitud.idSolicitudServicio} ya tiene una solicitud en Mi Súper`);
   }
+
+  // La creación en Mi Súper corre después de responder. Nadie espera su resultado,
+  // así que los errores solo se registran: las llamadas quedan en log_ejecucion con este trackId
+  const trackId = crypto.randomUUID();
+  after(async () => {
+    try {
+      await superService.crearSolicitud(solicitud, trackId);
+    } catch (error) {
+      console.error("No se pudo crear la solicitud en Mi Súper", { trackId, error });
+    }
+  });
+
+  const response: SolicitudAceptadaResponse = { trackId, mensaje: "Solicitud recibida; se enviará a Mi Súper" };
+  return Response.json(response, { status: 202 });
 }
 
 function errorResponse(status: number, message: string) {
