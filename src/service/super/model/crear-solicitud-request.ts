@@ -11,7 +11,7 @@ export interface CrearSolicitudRequest {
   beneficiary_type: string;
   creator: Creator;
   petitioner?: Petitioner;
-  petitioner_rut?: string;
+  petitioner_rut: string;
   company_rut: string;
   cup: string;
   region?: number;
