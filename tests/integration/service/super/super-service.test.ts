@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiClientService } from "@/service/super/api-client-service";
 import { SuperService } from "@/service/super/super-service";
-import { crearSolicitudRequestFixture } from "../../fixtures/crear-solicitud-request.fixture";
+import { nuevaSolicitudFixture } from "../../fixtures/nueva-solicitud.fixture";
 
 const credencialesConfiguradas = !!process.env.MISUPER_API_KEY && !!process.env.MISUPER_CHILE_ATIENDE_ID;
 
@@ -24,12 +24,11 @@ describe("Mi Súper (API real)", () => {
   });
 
   it.runIf(crearSolicitudActivado)("crea una solicitud", async () => {
-    const respuesta = await new SuperService().crearSolicitud(crearSolicitudRequestFixture);
+    const respuesta = await new SuperService().crearSolicitud(nuevaSolicitudFixture);
 
-    expect(respuesta).toMatchObject({
-      status: "OK",
-      ms_application_id: expect.any(Number),
-      message: expect.any(String),
+    expect(respuesta).toEqual({
+      idSolicitudMiSuper: expect.any(Number),
+      mensaje: expect.any(String),
     });
   });
 });

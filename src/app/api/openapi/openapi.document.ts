@@ -1,10 +1,11 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
-import { registerHelloPaths } from "../hello/hello.schema";
+import { registerSolicitudesPaths } from "../super/solicitudes/solicitudes.schema";
 
 const registry = new OpenAPIRegistry();
 
-// Registrar aquí los paths de cada endpoint nuevo
-registerHelloPaths(registry);
+// Registrar aquí los paths de cada endpoint nuevo.
+// /api/hello es solo el ejemplo de referencia y no se publica en la documentación
+registerSolicitudesPaths(registry);
 
 export const openApiDocument = new OpenApiGeneratorV31(registry.definitions).generateDocument({
   openapi: "3.1.0",

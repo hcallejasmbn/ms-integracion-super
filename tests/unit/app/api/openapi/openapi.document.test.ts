@@ -6,10 +6,13 @@ describe("openApiDocument", () => {
     expect(openApiDocument.openapi).toBe("3.1.0");
   });
 
-  it("documenta GET /api/hello con sus respuestas 200 y 400", () => {
-    expect(openApiDocument.paths?.["/api/hello"]?.get?.responses).toMatchObject({
-      200: { description: "Saludo generado" },
-      400: { description: "Parámetros inválidos" },
-    });
+  it("no publica GET /api/hello, que solo es el ejemplo de referencia", () => {
+    expect(openApiDocument.paths?.["/api/hello"]).toBeUndefined();
+  });
+
+  it("documenta POST /api/super/solicitudes con sus respuestas", () => {
+    const responses = openApiDocument.paths?.["/api/super/solicitudes"]?.post?.responses;
+
+    expect(Object.keys(responses ?? {})).toEqual(["201", "400", "422", "502"]);
   });
 });

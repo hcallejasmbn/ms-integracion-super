@@ -53,6 +53,35 @@ Tablas actuales:
 | `procesos` | `codigo` (PK), `nombre` | El código se asigna al insertar |
 | `actividades` | `id` (PK autogenerada), `nombre`, `proceso_codigo` (FK) | Cada actividad pertenece a un único proceso |
 
+## Docker
+
+La carpeta `cicd/` contiene el `Dockerfile` de producción. Usa la salida `standalone` de Next.js (`output: "standalone"` en `next.config.ts`), así que la imagen solo lleva `server.js` y las dependencias que realmente se usan. Se construye desde la raíz del repositorio:
+
+```bash
+docker build -f cicd/Dockerfile -t ms-integracion-super .
+docker run -p 3000:3000 --env-file .env ms-integracion-super
+```
+
+- Con `DB_MIGRAR_AL_INICIAR=true` (el valor por defecto), al iniciar el contenedor crea el esquema `super` y aplica las migraciones pendientes (`cicd/migrate.mjs`, con el migrador de `drizzle-orm`) y después levanta el servidor. Si las migraciones fallan, el contenedor no arranca. Un *advisory lock* de PostgreSQL evita que varias réplicas migren a la vez: una migra y las demás esperan.
+- Las variables de entorno se entregan al ejecutar el contenedor. La imagen no incluye el `.env` (lo excluye `cicd/Dockerfile.dockerignore`).
+- Con `DB_MIGRAR_AL_INICIAR=false` el contenedor no toca la base de datos, por ejemplo cuando las migraciones se ejecutan en un paso aparte del pipeline.
+- Dentro del contenedor, `localhost` es el propio contenedor. Para usar el PostgreSQL de tu máquina, cambia el host de `DATABASE_URL` por `host.docker.internal`.
+
+### Docker Compose
+
+`cicd/docker-compose.yml` levanta la aplicación junto a un PostgreSQL 17 propio, con sus datos en un volumen:
+
+```bash
+docker compose -f cicd/docker-compose.yml --env-file .env up --build -d   # levanta todo
+docker compose -f cicd/docker-compose.yml --env-file .env logs -f app     # logs de la aplicación
+docker compose -f cicd/docker-compose.yml --env-file .env down            # detiene (agrega -v para borrar los datos)
+```
+
+- La aplicación espera a que PostgreSQL esté listo y, con `DB_MIGRAR_AL_INICIAR=true`, crea el esquema y las tablas antes de aceptar peticiones.
+- El `DATABASE_URL` del `.env` no se usa: el compose lo arma para apuntar al servicio `db`.
+- Las variables `MISUPER_*` son obligatorias; si falta alguna, el compose no arranca y dice cuál.
+- Variables opcionales y sus valores por defecto: `DB_MIGRAR_AL_INICIAR=true`, `APP_PORT=3000`, `POSTGRES_USER=postgres`, `POSTGRES_PASSWORD=postgres`, `POSTGRES_DB=ms_integracion_super` y `POSTGRES_PORT=5435` (el puerto de PostgreSQL en tu máquina).
+
 ## Variables de entorno
 
 Copia `.env.example` a `.env` y completa los valores. El código accede a ellas solo a través de `EnvConfig` (`src/config/env.config.ts`). Si falta una variable, se lanza un error con su nombre al usarla.
@@ -106,6 +135,7 @@ src/
 │       └── dao/                 Consultas sobre cada entidad
 └── service/                     Servicios de orquestación
 drizzle/                         Historial de migraciones SQL (generado con pnpm db:generate)
+cicd/                            Dockerfile, docker-compose.yml y script de migraciones del contenedor
 ```
 
 ### Responsabilidades por capa
@@ -127,6 +157,7 @@ En Next.js cada carpeta dentro de `app/` forma parte de la URL. Los paréntesis 
 | Método | Ruta | Descripción |
 |---|---|---|
 | `GET` | `/api/hello` | Devuelve un saludo |
+| `POST` | `/api/super/solicitudes` | Crea una solicitud en Mi Súper |
 | `GET` | `/api/openapi` | Especificación OpenAPI 3.1 en JSON |
 | `GET` | `/api/docs` | Documentación interactiva de la API (Scalar) |
 
@@ -155,6 +186,52 @@ curl "http://localhost:3000/api/hello?name=Juan"
 ```json
 { "error": "El nombre no puede superar 50 caracteres" }
 ```
+
+### `POST /api/super/solicitudes`
+
+Crea una solicitud en Mi Súper. El contrato está en camelCase; el servicio lo traduce al formato snake_case que espera Mi Súper.
+
+El `service_id` de Mi Súper no se envía en la petición: el servicio lo toma de la variable de entorno `MISUPER_CHILE_ATIENDE_ID`.
+
+**Cuerpo** (`application/json`)
+
+| Campo | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| `tramiteId` | string | Sí | Trámite en Mi Súper (`procedure_id`) |
+| `entradaId` | entero | No | Entrada previa en Mi Súper (`ms_entry_id`). Si se omite se envía `""` |
+| `idSolicitudServicio` | string | Sí | Identificador de la solicitud en nuestro sistema |
+| `tipoBeneficiario` | string | Sí | Por ejemplo `company` |
+| `creador` | `{ tipo, datos: Persona }` | Sí | Quien crea la solicitud |
+| `solicitante` | Persona | No | |
+| `rutSolicitante` | string | Sí | RUT de quien solicita (`petitioner_rut`) |
+| `rutEmpresa` | string | Sí | |
+| `cup` | string | No | Si se omite se envía `""` |
+| `region`, `comuna` | entero | No | Códigos de región y comuna |
+| `direccion` | string | No | |
+
+`Persona` = `{ rut, nombre, apellido, email }`.
+
+```bash
+curl -X POST http://localhost:3000/api/super/solicitudes \
+  -H 'Content-Type: application/json' \
+  -d '{"tramiteId":"59296","idSolicitudServicio":"prueba","tipoBeneficiario":"company",
+       "creador":{"tipo":"petitioner","datos":{"rut":"12546655-1","nombre":"Claudio","apellido":"Perez","email":"claudio@test.cl"}},
+       "rutSolicitante":"12546655-1","rutEmpresa":"35793623-3","region":15,"comuna":15101,"direccion":"agustinas 1212"}'
+```
+
+**Respuestas**
+
+`201 Created`
+
+```json
+{ "idSolicitudMiSuper": 1499202, "mensaje": "La solicitud de permiso se ha creado con éxito" }
+```
+
+| Estado | Cuándo |
+|---|---|
+| `400` | El cuerpo no es JSON o no cumple el contrato. El mensaje indica el campo (`tramiteId: ...`) |
+| `422` | Mi Súper rechazó la solicitud. El mensaje es el de Mi Súper |
+| `502` | No se obtuvo el token o Mi Súper respondió con un error 5xx |
 
 ## Documentación de la API (OpenAPI)
 
