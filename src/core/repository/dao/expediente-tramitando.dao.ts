@@ -1,10 +1,13 @@
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { getDb, type Database } from "@/config/db.config";
+import { actividades } from "../entity/actividad.entity";
 import {
   expedientesTramitando,
   type ExpedienteTramitandoEntity,
   type NuevoExpedienteTramitandoEntity,
 } from "../entity/expediente-tramitando.entity";
+
+export type ExpedienteTramitandoConActividadEntity = ExpedienteTramitandoEntity & { actividadNombre: string };
 
 export class ExpedienteTramitandoDao {
   constructor(private readonly database?: Database) { }
@@ -29,5 +32,23 @@ export class ExpedienteTramitandoDao {
       .orderBy(desc(expedientesTramitando.fechaActividad), desc(expedientesTramitando.id))
       .limit(1);
     return ultimo;
+  }
+
+  // Último cambio de cada expediente indicado, con el nombre de su actividad, en una sola consulta
+  async listarUltimosPorExpedientes(codigosExpediente: string[]): Promise<ExpedienteTramitandoConActividadEntity[]> {
+    if (codigosExpediente.length === 0) return [];
+    return this.db
+      .selectDistinctOn([expedientesTramitando.codigoExpediente], {
+        ...getTableColumns(expedientesTramitando),
+        actividadNombre: actividades.nombre,
+      })
+      .from(expedientesTramitando)
+      .innerJoin(actividades, eq(actividades.id, expedientesTramitando.actividadId))
+      .where(inArray(expedientesTramitando.codigoExpediente, codigosExpediente))
+      .orderBy(
+        asc(expedientesTramitando.codigoExpediente),
+        desc(expedientesTramitando.fechaActividad),
+        desc(expedientesTramitando.id),
+      );
   }
 }

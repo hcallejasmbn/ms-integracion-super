@@ -6,33 +6,31 @@ const texto = z.string().trim().min(1);
 
 const PersonaSchema = z
   .object({
-    rut: texto.meta({ example: "12546655-1" }),
-    nombre: texto.meta({ example: "Claudio" }),
+    rut: texto.meta({ example: "13762927-5" }),
+    nombre: texto.meta({ example: "Ignacio" }),
     apellido: texto.meta({ example: "Perez" }),
-    email: z.email().meta({ example: "claudio@test.cl" }),
+    email: z.email().meta({ example: "ignacio.perez@example.cl" }),
   })
   .meta({ id: "Persona" });
 
+const BeneficiarioSchema = z
+  .object({
+    tipo: texto.meta({ description: "Tipo de titular", example: "company" }),
+    rut: texto.meta({ example: "77762937-5" }),
+    email: z.email().meta({ example: "contacto@constructoradelsur.cl" }),
+  })
+  .meta({ id: "Beneficiario", description: "Titular de la solicitud (principal en Mi Súper)" });
+
 export const NuevaSolicitudSchema = z
   .object({
-    tramiteId: texto.meta({ description: "Trámite en Mi Súper", example: "59296" }),
-    entradaId: z.int().positive().optional().meta({ description: "Entrada previa en Mi Súper, si existe" }),
+    tramiteId: texto.meta({ description: "Trámite en Mi Súper", example: "55987" }),
     // Se guarda como codigo_expediente en solicitudes_super (varchar(50))
     idSolicitudServicio: texto
       .max(50)
       .meta({ description: "Código del expediente en nuestro sistema. Admite una sola solicitud", example: "SL12048" }),
-    tipoBeneficiario: texto.meta({ example: "company" }),
-    creador: z.object({
-      tipo: texto.meta({ example: "petitioner" }),
-      datos: PersonaSchema,
-    }),
-    solicitante: PersonaSchema.optional(),
-    rutSolicitante: texto.meta({ example: "16418825-7" }),
-    rutEmpresa: texto.meta({ example: "35793623-3" }),
-    cup: z.string().optional(),
-    region: z.int().positive().optional().meta({ example: 15 }),
-    comuna: z.int().positive().optional().meta({ example: 15101 }),
-    direccion: texto.optional().meta({ example: "agustinas 1212" }),
+    beneficiario: BeneficiarioSchema,
+    creador: PersonaSchema.meta({ description: "Quien crea la solicitud" }),
+    cup: z.string().optional().meta({ example: "MTPDND55" }),
   })
   .meta({ id: "NuevaSolicitud" });
 

@@ -1,0 +1,31 @@
+-- Proceso "Concesion OLP" con sus actividades. Los id de las actividades los asigna la identidad,
+-- en el orden de esta lista
+INSERT INTO "super"."procesos" ("codigo", "nombre") VALUES ('9', 'Concesion OLP');
+--> statement-breakpoint
+INSERT INTO "super"."actividades" ("nombre", "proceso_codigo") VALUES
+	('Ingresar Solicitud', '9'),
+	('Ingresar Documentacion', '9'),
+	('Verificar caracter inmueble', '9'),
+	('Generar informe técnico de pertinencia', '9'),
+	('Visar o elaborar plano', '9'),
+	('Gestión de Autorizaciones', '9'),
+	('Tasar el Inmueble', '9'),
+	('Elaborar informe para jefe DBN', '9'),
+	('Elaborar informe para ministro', '9'),
+	('Analizar informe', '9'),
+	('Elaborar notificacion decision ministro', '9'),
+	('Elaborar decreto autorizatorio', '9'),
+	('Firmar decreto', '9'),
+	('Firmar resolucion rectificatoria', '9'),
+	('Elaborar notificacion decreto derogatorio', '9'),
+	('Publicar en diario oficial', '9'),
+	('Elaborar notificacion decreto-cupon', '9'),
+	('Elabora y suscribe escritura publica', '9'),
+	('Elaborar decreto aprobatorio', '9'),
+	('Visar decreto aprobatorio', '9'),
+	('Firmar decreto aprobatorio', '9'),
+	('Elabora notificacion decreto aprobatorio', '9'),
+	('Recibir copia de anotacion marginal en inscripcion', '9'),
+	('Determinar la pertinencia del trámite', '9'),
+	('Elaborar resolución negativa y el oficio', '9'),
+	('Ingresa datos CEE y valor renta concesional fijada', '9');

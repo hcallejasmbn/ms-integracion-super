@@ -48,6 +48,8 @@ La carpeta `drizzle/` es el historial de migraciones y se versiona en git. Cada 
 
 ### Modelo entidad-relación
 
+`carga_actividades_expedientes` aparece sin relaciones porque no tiene FK: es la tabla de entrada de la carga diaria.
+
 ```mermaid
 erDiagram
     procesos ||--o{ actividades : "tiene"
@@ -114,10 +116,19 @@ erDiagram
         timestamptz fecha_notificacion "opcional"
         uuid track_id
     }
+    carga_actividades_expedientes {
+        bigint id PK "autogenerado"
+        varchar codigo_expediente "sin FK"
+        integer actividad_id "sin FK, se compara por nombre"
+        timestamptz fecha_actividad
+        varchar responsable "opcional"
+        text comentario "opcional"
+        timestamptz fecha_carga
+    }
     log_ejecucion {
         bigint id PK "autogenerado"
         uuid track_id "agrupa los intentos"
-        varchar operacion "CREAR_SOLICITUD, NOTIFICAR_ESTADO, OBTENER_TOKEN"
+        varchar operacion "OBTENER_TOKEN, CREAR_SOLICITUD, ACTUALIZAR_SOLICITUD"
         integer intento
         varchar url
         varchar metodo
@@ -133,7 +144,7 @@ erDiagram
 
 ### Tablas
 
-Las tablas se agrupan en cuatro áreas: proceso interno, configuración de SUPER, expedientes y trazabilidad.
+Las tablas se agrupan en cinco áreas: proceso interno, configuración de SUPER, carga diaria, expedientes y trazabilidad.
 
 **Proceso interno**
 
@@ -151,6 +162,12 @@ Las tablas se agrupan en cuatro áreas: proceso interno, configuración de SUPER
 | `stage_codes` | `code` (PK), `value` (único) | Catálogo de `STAGE_CODE`, por ejemplo `1` → `ENTRY` |
 | `status_codes` | `code` (PK), `value` (único) | Catálogo de `STATUS_CODE`, por ejemplo `1` → `ENTERED` |
 | `actividades_estados_super` | `actividad_id` (PK, FK), `estado_super_id` (FK) | Qué estado SUPER se informa en cada actividad. Una actividad sin fila no se informa |
+
+**Carga diaria**
+
+| Tabla | Columnas | Notas |
+|---|---|---|
+| `carga_actividades_expedientes` | `id` (PK autogenerada), `codigo_expediente`, `actividad_id`, `fecha_actividad`, `responsable`, `comentario`, `fecha_carga` | Movimientos de actividad que un procedimiento externo carga cada día. Es solo de entrada y no tiene FK, para que una carga con datos desconocidos no falle. Único por `codigo_expediente`, `actividad_id`, `fecha_actividad` |
 
 **Expedientes**
 
@@ -174,6 +191,14 @@ Las tablas se agrupan en cuatro áreas: proceso interno, configuración de SUPER
 - Las FK de `estados_super` usan `ON UPDATE CASCADE` (si cambia un código, los estados lo siguen) y `ON DELETE RESTRICT` (no se puede borrar un proceso ni un código en uso).
 - Una actividad informa como máximo un estado SUPER.
 
+**Carga diaria**
+
+- El procedimiento externo carga solo el último movimiento de cada expediente. Si un expediente se movió dos veces en el día, solo se informa la última actividad.
+- Si la tabla acumula varias cargas, el job toma solo el movimiento más reciente de cada expediente.
+- El job compara la actividad cargada con la última de `expedientes_tramitando` **por nombre**, no por `id`. El `id` es interno y un cambio de flujo puede darle otro a la misma actividad.
+- Un movimiento con un `actividad_id` que no existe en `actividades` se omite y queda un aviso en la consola.
+- Un expediente sin registros en `expedientes_tramitando` siempre cuenta como cambio.
+
 **Expedientes**
 
 - Un expediente tiene una sola solicitud en SUPER, y un `ms_application_id` pertenece a un solo expediente.
@@ -192,6 +217,8 @@ Las tablas se agrupan en cuatro áreas: proceso interno, configuración de SUPER
   - 14 en `status_codes`, de `1` → `ENTERED` a `14` → `CLOSED`.
 
   Los que SUPER agregue después los ingresa el usuario.
+- La migración `0004` carga el proceso `9` → `Concesion OLP` en `procesos` y sus 26 actividades en `actividades`, desde `Ingresar Solicitud` hasta `Ingresa datos CEE y valor renta concesional fijada`. Los `id` de las actividades los asigna la identidad en el orden de la lista.
+- La migración `0006` agrega otras 13 actividades al proceso `9`, desde `Firma Seremi` hasta `Recibir Notificación - Resolución`.
 - El resto de las tablas no tiene carga inicial. La configuración de `procesos_super`, `estados_super` y `actividades_estados_super` se cargará cuando esté definida la lógica de negocio final.
 
 ## Docker
@@ -220,12 +247,14 @@ docker compose -f cicd/docker-compose.yml --env-file .env down            # deti
 
 - La aplicación espera a que PostgreSQL esté listo y, con `DB_MIGRAR_AL_INICIAR=true`, crea el esquema y las tablas antes de aceptar peticiones.
 - El `DATABASE_URL` del `.env` no se usa: el compose lo arma para apuntar al servicio `db`.
-- Las variables `MISUPER_*` son obligatorias; si falta alguna, el compose no arranca y dice cuál.
+- `HOST_SUPER`, `PATH_TOKEN_SUPER`, `PATH_APPLICATIONS_SUPER` y las `MISUPER_*` son obligatorias; si falta alguna, el compose no arranca y dice cuál.
 - Variables opcionales y sus valores por defecto: `DB_MIGRAR_AL_INICIAR=true`, `APP_PORT=3000`, `POSTGRES_USER=postgres`, `POSTGRES_PASSWORD=postgres`, `POSTGRES_DB=ms_integracion_super` y `POSTGRES_PORT=5435` (el puerto de PostgreSQL en tu máquina).
 
 ## Variables de entorno
 
 Copia `.env.example` a `.env` y completa los valores. El código accede a ellas solo a través de `EnvConfig` (`src/config/env.config.ts`). Si falta una variable, se lanza un error con su nombre al usarla.
+
+Las URL de Mi Súper se arman como `HOST_SUPER` + `PATH_*`: `PATH_TOKEN_SUPER` para el token y `PATH_APPLICATIONS_SUPER` para crear y actualizar solicitudes.
 
 ## Arquitectura
 
@@ -258,11 +287,14 @@ src/
 │   ├── (presentacion)/          Capa de presentación: páginas para el usuario
 │   │   └── page.tsx             → se sirve en /
 │   ├── api/                     Capa de exposición: endpoints REST
+│   │   ├── procesos/            Procesos y sus actividades
+│   │   ├── super/procesos/      Estados SUPER de cada proceso SUPER
 │   │   ├── super/solicitudes/
 │   │   │   ├── route.ts         Handler HTTP
 │   │   │   └── solicitudes.schema.ts  Contrato: esquemas Zod y registro OpenAPI
 │   │   ├── openapi/             Especificación OpenAPI generada (/api/openapi)
 │   │   └── docs/                Documentación interactiva (/api/docs)
+│   ├── job/                     Jobs programados (sin URL)
 │   ├── layout.tsx               Layout raíz (Next.js lo exige aquí)
 │   ├── globals.css
 │   └── favicon.ico              (Next.js lo exige aquí)
@@ -297,9 +329,73 @@ En Next.js cada carpeta dentro de `app/` forma parte de la URL. Los paréntesis 
 
 | Método | Ruta | Descripción |
 |---|---|---|
+| `GET` | `/api/procesos` | Lista los procesos cargados |
+| `GET` | `/api/procesos/{codigo}/actividades` | Lista las actividades de un proceso |
+| `GET` | `/api/procesos/{codigo}/estados-super` | Lista el estado SUPER configurado para cada actividad de un proceso |
+| `GET` | `/api/super/procesos/{codigo}/estados` | Lista los estados SUPER configurados para un proceso SUPER |
 | `POST` | `/api/super/solicitudes` | Recibe una solicitud y la crea en Mi Súper de forma asíncrona |
 | `GET` | `/api/openapi` | Especificación OpenAPI 3.1 en JSON |
 | `GET` | `/api/docs` | Documentación interactiva de la API (Scalar) |
+
+### `GET /api/procesos`
+
+Devuelve todos los procesos ordenados por código.
+
+```json
+[{ "codigo": "9", "nombre": "Concesion OLP" }]
+```
+
+### `GET /api/procesos/{codigo}/actividades`
+
+Devuelve las actividades del proceso en el orden en que se crearon.
+
+```json
+[{ "id": 3, "nombre": "Ingresar Solicitud", "procesoCodigo": "9" }]
+```
+
+| Estado | Cuándo |
+|---|---|
+| 200 | El proceso existe. Si no tiene actividades, devuelve `[]` |
+| 400 | El código viene vacío |
+| 404 | El proceso no existe |
+
+### `GET /api/procesos/{codigo}/estados-super`
+
+Devuelve cada actividad del proceso con el estado SUPER que se informa cuando un expediente pasa por ella, según `actividades_estados_super`. Incluye todas las actividades: las que no tienen estado configurado vienen con `estadoSuper: null`, lo que sirve para revisar qué falta configurar. `estadoSuper` tiene la misma forma que en `GET /api/super/procesos/{codigo}/estados`.
+
+```json
+[
+  { "actividad": { "id": 3, "nombre": "Ingresar Solicitud", "procesoCodigo": "9" },
+    "estadoSuper": { "id": 1, "code": "IWSP-1", "stageValue": "ENTRY", "statusValue": "ENTERED", "...": "..." } },
+  { "actividad": { "id": 4, "nombre": "Ingresar Documentacion", "procesoCodigo": "9" }, "estadoSuper": null }
+]
+```
+
+| Estado | Cuándo |
+|---|---|
+| 200 | El proceso existe |
+| 400 | El código viene vacío |
+| 404 | El proceso no existe |
+
+### `GET /api/super/procesos/{codigo}/estados`
+
+Devuelve los estados (séxtuplas) configurados para un proceso SUPER, en el orden en que se crearon. El `codigo` es el de `procesos_super`, no el de `procesos`. Para ver los estados SUPER de un proceso interno se usa `GET /api/procesos/{codigo}/estados-super`. Junto a `stageCode` y `statusCode`, que son los códigos internos de los catálogos, vienen `stageValue` y `statusValue` con el valor que usa SUPER.
+
+```json
+[{
+  "id": 1, "procesoSuperCodigo": "OLP", "code": "IWSP-1",
+  "stageCode": "1", "stageValue": "ENTRY",
+  "status": "Solicitud ingresada", "statusCode": "1", "statusValue": "ENTERED",
+  "subtask": "Solicitud recibida", "useWorkingDays": "DÍAS HÁBILES",
+  "responsibleType": "TITULAR", "suspensionType": null
+}]
+```
+
+| Estado | Cuándo |
+|---|---|
+| 200 | El proceso SUPER existe. Si no tiene estados, devuelve `[]` |
+| 400 | El código viene vacío |
+| 404 | El proceso SUPER no existe |
 
 ### `POST /api/super/solicitudes`
 
@@ -312,32 +408,23 @@ Después de responder, el servicio:
 
 Si Mi Súper rechaza la solicitud o no está disponible, quien llamó al endpoint no se entera: el resultado se consulta en `log_ejecucion` por `trackId`. Todavía no hay reintentos, y si el contenedor se detiene justo después de responder, esa solicitud no se envía.
 
-El `service_id` de Mi Súper no se envía en la petición: el servicio lo toma de la variable de entorno `MISUPER_CHILE_ATIENDE_ID`.
-
 **Cuerpo** (`application/json`)
 
-| Campo | Tipo | Requerido | Descripción |
+| Campo | Tipo | Requerido | En Mi Súper |
 |---|---|---|---|
-| `tramiteId` | string | Sí | Trámite en Mi Súper (`procedure_id`) |
-| `entradaId` | entero | No | Entrada previa en Mi Súper (`ms_entry_id`). Si se omite se envía `""` |
-| `idSolicitudServicio` | string (máx. 50) | Sí | Código del expediente en nuestro sistema (`codigo_expediente`). Un expediente admite una sola solicitud |
-| `tipoBeneficiario` | string | Sí | Por ejemplo `company` |
-| `creador` | `{ tipo, datos: Persona }` | Sí | Quien crea la solicitud |
-| `solicitante` | Persona | No | |
-| `rutSolicitante` | string | Sí | RUT de quien solicita (`petitioner_rut`) |
-| `rutEmpresa` | string | Sí | |
-| `cup` | string | No | Si se omite se envía `""` |
-| `region`, `comuna` | entero | No | Códigos de región y comuna |
-| `direccion` | string | No | |
-
-`Persona` = `{ rut, nombre, apellido, email }`.
+| `tramiteId` | string | Sí | `procedure_id` |
+| `idSolicitudServicio` | string (máx. 50) | Sí | `service_application_id`. Es el código del expediente en nuestro sistema (`codigo_expediente`); un expediente admite una sola solicitud |
+| `beneficiario` | `{ tipo, rut, email }` | Sí | `principal { type, rut, email }`: titular de la solicitud, por ejemplo `tipo: "company"` |
+| `creador` | `{ rut, nombre, apellido, email }` | Sí | `creator { rut, first_name, last_name, email }`: quien crea la solicitud |
+| `cup` | string | No | `cup`. Si se omite se envía `""` |
 
 ```bash
 curl -X POST http://localhost:3000/api/super/solicitudes \
   -H 'Content-Type: application/json' \
-  -d '{"tramiteId":"59296","idSolicitudServicio":"prueba","tipoBeneficiario":"company",
-       "creador":{"tipo":"petitioner","datos":{"rut":"12546655-1","nombre":"Claudio","apellido":"Perez","email":"claudio@test.cl"}},
-       "rutSolicitante":"12546655-1","rutEmpresa":"35793623-3","region":15,"comuna":15101,"direccion":"agustinas 1212"}'
+  -d '{"tramiteId":"55987","idSolicitudServicio":"ABCDEFG",
+       "beneficiario":{"tipo":"company","rut":"77762937-5","email":"contacto@constructoradelsur.cl"},
+       "creador":{"rut":"13762927-5","nombre":"Ignacio","apellido":"Perez","email":"ignacio.perez@example.cl"},
+       "cup":"MTPDND55"}'
 ```
 
 **Respuestas**
@@ -359,6 +446,28 @@ Para ver qué pasó con una solicitud:
 SELECT operacion, response_status, resultado, response_body
 FROM super.log_ejecucion WHERE track_id = '<trackId>' ORDER BY id;
 ```
+
+### Job de notificación a SUPER
+
+`src/app/job/notificacion-super.job.ts` programa `JobService.jobNotificacionSuper` con [croner](https://github.com/hexagon/croner). `src/instrumentation.ts` lo registra al iniciar el servidor (`pnpm dev`, `pnpm start` o el contenedor), solo en el runtime de Node.js. La carpeta `job/` no tiene `page.tsx` ni `route.ts`, así que no expone ninguna URL.
+
+| Variable | Por defecto | Uso |
+|---|---|---|
+| `JOB_NOTIFICACION_SUPER_ACTIVO` | `true` | `false` desactiva el job |
+| `JOB_NOTIFICACION_SUPER_CRON` | `0 3 * * *` | Expresión cron: todos los días a las 3:00 |
+| `JOB_ZONA_HORARIA` | `America/Santiago` | Zona horaria de la expresión cron |
+
+Si una ejecución no termina antes de la siguiente, la siguiente no parte. Un error se registra en consola y el job vuelve a correr en la fecha siguiente.
+
+Con varias réplicas, cada una ejecuta el job. Mientras no exista un bloqueo entre réplicas, deja `JOB_NOTIFICACION_SUPER_ACTIVO=true` en una sola.
+
+### Actualización de solicitudes (sin endpoint)
+
+`SuperService.actualizarSolicitud(idSolicitudMiSuper, actualizacion, trackId)` informa a Mi Súper las tareas de una solicitud ya creada, con `POST {PATH_APPLICATIONS_SUPER}{ms_application_id}`. No se expone como API: la usará el proceso que detecta los cambios de actividad.
+
+- La URL es `HOST_SUPER` + `PATH_APPLICATIONS_SUPER` + el `ms_application_id` (el de `solicitudes_super`). Crear usa la misma URL sin el id.
+- El dominio usa nombres en español (`tareas`, `codigo`, `referencia`, `comentario`, `urlAccionPrincipal`, `idResponsable`, `documentos`, `suspension.fechaInicio`). El mapper los traduce a `tasks`, `code`, `reference`, `comment`, `principal_action_url`, `responsible_id`, `documents` y `suspension.start_date`.
+- Cada llamada queda en `log_ejecucion` con la operación `ACTUALIZAR_SOLICITUD`. Los errores se traducen igual que al crear: 4xx → `SolicitudRechazadaError` y token o 5xx → `MiSuperNoDisponibleError`.
 
 ## Documentación de la API (OpenAPI)
 

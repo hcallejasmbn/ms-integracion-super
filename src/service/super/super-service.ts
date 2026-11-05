@@ -1,11 +1,17 @@
 import { EnvConfig } from "@/config/env.config";
-import type { NuevaSolicitud, SolicitudCreada } from "@/core/domain/solicitud/solicitud";
+import type {
+  ActualizacionSolicitud,
+  NuevaSolicitud,
+  SolicitudActualizada,
+  SolicitudCreada,
+} from "@/core/domain/solicitud/solicitud";
 import { MiSuperNoDisponibleError, SolicitudRechazadaError } from "@/core/domain/solicitud/solicitud.errors";
 import { SolicitudSuperDao } from "@/core/repository/dao/solicitud-super.dao";
 import { ApiClientService, type Traza } from "./api-client-service";
+import type { ActualizarSolicitudResponse } from "./model/actualizar-solicitud-response";
 import type { CrearSolicitudResponse } from "./model/crear-solicitud-response";
 import { MiSuperApiError } from "./model/mi-super-api.error";
-import { toCrearSolicitudRequest, toSolicitudCreada } from "./solicitud.mapper";
+import { toActualizarSolicitudRequest, toCrearSolicitudRequest, toSolicitudCreada } from "./solicitud.mapper";
 
 export class SuperService {
   constructor(
@@ -23,37 +29,12 @@ export class SuperService {
    * Cada llamada HTTP queda en log_ejecucion con el trackId recibido.
    */
   async crearSolicitud(solicitud: NuevaSolicitud, trackId: string): Promise<SolicitudCreada> {
-    const crearSolicitudRequest = toCrearSolicitudRequest(solicitud, EnvConfig.miSuperChileAtiendeId);
+    const crearSolicitudRequest = toCrearSolicitudRequest(solicitud);
     const traza: Traza = { trackId, operacion: "CREAR_SOLICITUD" };
 
-    let request: RequestInit;
-    try {
-      request = await this.apiClientService.createRequest(crearSolicitudRequest, traza);
-    } catch (error) {
-      // Si falla el token, el problema es de credenciales o de Mi Súper, no de la solicitud
-      if (error instanceof MiSuperApiError) {
-        throw new MiSuperNoDisponibleError(`Mi Súper no entregó el token (estado ${error.status})`);
-      }
-      throw error;
-    }
-
-    let solicitudCreada: SolicitudCreada;
-    try {
-      const response = await this.apiClientService.getResponse<CrearSolicitudResponse>(
-        EnvConfig.miSuperEndpointSolicitud,
-        "POST",
-        request,
-        traza,
-      );
-      solicitudCreada = toSolicitudCreada(response);
-    } catch (error) {
-      if (error instanceof MiSuperApiError) {
-        throw error.status < 500
-          ? new SolicitudRechazadaError(mensajeDeMiSuper(error.body))
-          : new MiSuperNoDisponibleError(`Mi Súper respondió con estado ${error.status}`);
-      }
-      throw error;
-    }
+    const request = await this.crearRequest(crearSolicitudRequest, traza);
+    const response = await this.enviar<CrearSolicitudResponse>(EnvConfig.miSuperUrlApplications, request, traza);
+    const solicitudCreada = toSolicitudCreada(response);
 
     // Si esto falla, el ms_application_id igual queda en la respuesta registrada en log_ejecucion
     await this.solicitudSuperDao.crear({
@@ -64,8 +45,48 @@ export class SuperService {
     return solicitudCreada;
   }
 
-  async updateSolicitud(): Promise<String> {
-    return "null";
+  /**
+   * Informa a Mi Súper las tareas de una solicitud ya creada (POST {PATH_APPLICATIONS_SUPER}{ms_application_id}).
+   * No se expone como API: la usará el proceso que detecta cambios de actividad.
+   * Cada llamada HTTP queda en log_ejecucion con el trackId recibido.
+   */
+  async actualizarSolicitud(
+    idSolicitudMiSuper: number,
+    actualizacion: ActualizacionSolicitud,
+    trackId: string,
+  ): Promise<SolicitudActualizada> {
+    const traza: Traza = { trackId, operacion: "ACTUALIZAR_SOLICITUD" };
+    const url = new URL(String(idSolicitudMiSuper), EnvConfig.miSuperUrlApplications);
+
+    const request = await this.crearRequest(toActualizarSolicitudRequest(actualizacion), traza);
+    const response = await this.enviar<ActualizarSolicitudResponse | undefined>(url.toString(), request, traza);
+    return { idSolicitudMiSuper, mensaje: response?.message };
+  }
+
+  private async crearRequest<T>(body: T, traza: Traza): Promise<RequestInit> {
+    try {
+      return await this.apiClientService.createRequest(body, traza);
+    } catch (error) {
+      // Si falla el token, el problema es de credenciales o de Mi Súper, no de la solicitud
+      if (error instanceof MiSuperApiError) {
+        throw new MiSuperNoDisponibleError(`Mi Súper no entregó el token (estado ${error.status})`);
+      }
+      throw error;
+    }
+  }
+
+  // Mi Súper solo recibe POST en estos endpoints; 4xx es rechazo de la solicitud y 5xx, falla de Mi Súper
+  private async enviar<T>(url: string, request: RequestInit, traza: Traza): Promise<T> {
+    try {
+      return await this.apiClientService.getResponse<T>(url, "POST", request, traza);
+    } catch (error) {
+      if (error instanceof MiSuperApiError) {
+        throw error.status < 500
+          ? new SolicitudRechazadaError(mensajeDeMiSuper(error.body))
+          : new MiSuperNoDisponibleError(`Mi Súper respondió con estado ${error.status}`);
+      }
+      throw error;
+    }
   }
 }
 

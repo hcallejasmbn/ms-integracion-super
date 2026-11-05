@@ -22,6 +22,15 @@ export class ProcesoDao {
     return this.db.select().from(procesos).orderBy(asc(procesos.codigo));
   }
 
+  async existe(codigo: string): Promise<boolean> {
+    const [fila] = await this.db
+      .select({ codigo: procesos.codigo })
+      .from(procesos)
+      .where(eq(procesos.codigo, codigo))
+      .limit(1);
+    return fila !== undefined;
+  }
+
   async buscarPorCodigo(codigo: string): Promise<ProcesoConActividades | undefined> {
     return this.db.query.procesos.findFirst({
       where: eq(procesos.codigo, codigo),
