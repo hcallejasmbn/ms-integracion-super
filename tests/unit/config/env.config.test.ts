@@ -4,16 +4,22 @@ import { EnvConfig } from "@/config/env.config";
 const VALOR = "valor-test";
 
 describe("EnvConfig", () => {
-  it("devuelve MISUPER_ENDPOINT_SOLICITUD cuando está definida", () => {
-    vi.stubEnv("MISUPER_ENDPOINT_SOLICITUD", VALOR);
+  it("devuelve HOST_SUPER cuando está definida", () => {
+    vi.stubEnv("HOST_SUPER", VALOR);
 
-    expect(EnvConfig.miSuperEndpointSolicitud).toBe(VALOR);
+    expect(EnvConfig.hostSuper).toBe(VALOR);
   });
 
-  it("devuelve MISUPER_ENDPOINT_TOKEN cuando está definida", () => {
-    vi.stubEnv("MISUPER_ENDPOINT_TOKEN", VALOR);
+  it("devuelve PATH_TOKEN_SUPER cuando está definida", () => {
+    vi.stubEnv("PATH_TOKEN_SUPER", VALOR);
 
-    expect(EnvConfig.miSuperEndpointToken).toBe(VALOR);
+    expect(EnvConfig.pathToken).toBe(VALOR);
+  });
+
+  it("devuelve PATH_APPLICATIONS_SUPER cuando está definida", () => {
+    vi.stubEnv("PATH_APPLICATIONS_SUPER", VALOR);
+
+    expect(EnvConfig.pathApplications).toBe(VALOR);
   });
 
   it("devuelve MISUPER_API_KEY cuando está definida", () => {
@@ -34,16 +40,36 @@ describe("EnvConfig", () => {
     expect(EnvConfig.databaseUrl).toBe(VALOR);
   });
 
-  it("avisa cuál variable falta si MISUPER_ENDPOINT_SOLICITUD está vacía", () => {
-    vi.stubEnv("MISUPER_ENDPOINT_SOLICITUD", "");
+  it("arma la URL del token uniendo HOST_SUPER y PATH_TOKEN_SUPER", () => {
+    vi.stubEnv("HOST_SUPER", "https://misuper.test");
+    vi.stubEnv("PATH_TOKEN_SUPER", "/api/v1/api-token-auth");
 
-    expect(() => EnvConfig.miSuperEndpointSolicitud).toThrow("Falta la variable de entorno MISUPER_ENDPOINT_SOLICITUD");
+    expect(EnvConfig.miSuperUrlToken).toBe("https://misuper.test/api/v1/api-token-auth");
   });
 
-  it("avisa cuál variable falta si MISUPER_ENDPOINT_TOKEN está vacía", () => {
-    vi.stubEnv("MISUPER_ENDPOINT_TOKEN", "");
+  it("arma la URL de applications terminada en / aunque el path no la traiga", () => {
+    vi.stubEnv("HOST_SUPER", "https://misuper.test/");
+    vi.stubEnv("PATH_APPLICATIONS_SUPER", "api/v2/applications");
 
-    expect(() => EnvConfig.miSuperEndpointToken).toThrow("Falta la variable de entorno MISUPER_ENDPOINT_TOKEN");
+    expect(EnvConfig.miSuperUrlApplications).toBe("https://misuper.test/api/v2/applications/");
+  });
+
+  it("avisa cuál variable falta si HOST_SUPER está vacía", () => {
+    vi.stubEnv("HOST_SUPER", "");
+
+    expect(() => EnvConfig.hostSuper).toThrow("Falta la variable de entorno HOST_SUPER");
+  });
+
+  it("avisa cuál variable falta si PATH_TOKEN_SUPER está vacía", () => {
+    vi.stubEnv("PATH_TOKEN_SUPER", "");
+
+    expect(() => EnvConfig.pathToken).toThrow("Falta la variable de entorno PATH_TOKEN_SUPER");
+  });
+
+  it("avisa cuál variable falta si PATH_APPLICATIONS_SUPER está vacía", () => {
+    vi.stubEnv("PATH_APPLICATIONS_SUPER", "");
+
+    expect(() => EnvConfig.pathApplications).toThrow("Falta la variable de entorno PATH_APPLICATIONS_SUPER");
   });
 
   it("avisa cuál variable falta si MISUPER_API_KEY está vacía", () => {

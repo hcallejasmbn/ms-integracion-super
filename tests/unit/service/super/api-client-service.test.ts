@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientService } from "@/service/super/api-client-service";
 import type { CrearSolicitudResponse } from "@/service/super/model/crear-solicitud-response";
 
+const HOST_SUPER = "https://misuper.test";
+const PATH_TOKEN = "api/v1/api-token-auth";
 const ENDPOINT_TOKEN = "https://misuper.test/api/v1/api-token-auth";
-const ENDPOINT_SOLICITUD = "https://misuper.test/api/v1/applications/";
+const ENDPOINT_SOLICITUD = "https://misuper.test/api/v2/applications/";
 const API_KEY = "api-key-test";
 const CHILE_ATIENDE_ID = "chile-atiende-id-test";
 const TOKEN = "token-test";
@@ -15,7 +17,8 @@ describe("ApiClientService.createRequest", () => {
   let apiClientService: ApiClientService;
 
   beforeEach(() => {
-    vi.stubEnv("MISUPER_ENDPOINT_TOKEN", ENDPOINT_TOKEN);
+    vi.stubEnv("HOST_SUPER", HOST_SUPER);
+    vi.stubEnv("PATH_TOKEN_SUPER", PATH_TOKEN);
     vi.stubEnv("MISUPER_API_KEY", API_KEY);
     vi.stubEnv("MISUPER_CHILE_ATIENDE_ID", CHILE_ATIENDE_ID);
     fetch.mockReset().mockImplementation(async () => Response.json({ token: TOKEN }));
