@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { ApiClientService } from "@/service/super/api-client-service";
 import { SuperService } from "@/service/super/super-service";
@@ -24,7 +25,7 @@ describe("Mi Súper (API real)", () => {
   });
 
   it.runIf(crearSolicitudActivado)("crea una solicitud", async () => {
-    const respuesta = await new SuperService().crearSolicitud(nuevaSolicitudFixture);
+    const respuesta = await new SuperService().crearSolicitud(nuevaSolicitudFixture, randomUUID());
 
     expect(respuesta).toEqual({
       idSolicitudMiSuper: expect.any(Number),
