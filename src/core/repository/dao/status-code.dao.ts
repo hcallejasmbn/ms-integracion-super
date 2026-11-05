@@ -1,4 +1,4 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { getDb, type Database } from "@/config/db.config";
 import { statusCodes, type StatusCodeEntity, type NuevoStatusCodeEntity } from "../entity/status-code.entity";
 
@@ -17,5 +17,10 @@ export class StatusCodeDao {
 
   async listar(): Promise<StatusCodeEntity[]> {
     return this.db.select().from(statusCodes).orderBy(asc(statusCodes.code));
+  }
+
+  async existe(code: string): Promise<boolean> {
+    const [fila] = await this.db.select({ code: statusCodes.code }).from(statusCodes).where(eq(statusCodes.code, code)).limit(1);
+    return fila !== undefined;
   }
 }

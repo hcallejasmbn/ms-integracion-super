@@ -1,26 +1,29 @@
-import type { NuevaSolicitud, Persona, SolicitudCreada } from "@/core/domain/solicitud/solicitud";
+import type {
+  ActualizacionSolicitud,
+  Beneficiario,
+  Documento,
+  NuevaSolicitud,
+  Persona,
+  SolicitudCreada,
+  Tarea,
+} from "@/core/domain/solicitud/solicitud";
+import type { ActualizarSolicitudRequest } from "./model/actualizar-solicitud-request";
 import type { CrearSolicitudRequest } from "./model/crear-solicitud-request";
 import type { CrearSolicitudResponse } from "./model/crear-solicitud-response";
-import type { Data } from "./model/data";
+import type { Creator } from "./model/creator";
+import type { Principal } from "./model/principal";
+import type { Document } from "./model/document";
+import type { Task } from "./model/task";
 
-// Traduce entre el dominio (camelCase) y el JSON de Mi Súper (snake_case).
-// service_id no viene en la solicitud: es el id de ChileAtiende configurado para esta integración
-export function toCrearSolicitudRequest(solicitud: NuevaSolicitud, serviceId: string): CrearSolicitudRequest {
+// Traduce entre el dominio (camelCase) y el JSON de Mi Súper (snake_case)
+export function toCrearSolicitudRequest(solicitud: NuevaSolicitud): CrearSolicitudRequest {
   return {
-    service_id: serviceId,
     procedure_id: solicitud.tramiteId,
-    // Mi Súper espera "" cuando no hay entrada previa
-    ms_entry_id: solicitud.entradaId ?? "",
     service_application_id: solicitud.idSolicitudServicio,
-    beneficiary_type: solicitud.tipoBeneficiario,
-    creator: { type: solicitud.creador.tipo, data: toData(solicitud.creador.datos) },
-    petitioner: solicitud.solicitante && toData(solicitud.solicitante),
-    petitioner_rut: solicitud.rutSolicitante,
-    company_rut: solicitud.rutEmpresa,
+    principal: toPrincipal(solicitud.beneficiario),
+    creator: toCreator(solicitud.creador),
+    // Mi Súper espera "" cuando no hay CUP
     cup: solicitud.cup ?? "",
-    region: solicitud.region,
-    commune: solicitud.comuna,
-    address: solicitud.direccion,
   };
 }
 
@@ -28,7 +31,34 @@ export function toSolicitudCreada(response: CrearSolicitudResponse): SolicitudCr
   return { idSolicitudMiSuper: response.ms_application_id, mensaje: response.message };
 }
 
-function toData(persona: Persona): Data {
+export function toActualizarSolicitudRequest(actualizacion: ActualizacionSolicitud): ActualizarSolicitudRequest {
+  return { tasks: actualizacion.tareas.map(toTask) };
+}
+
+function toTask(tarea: Tarea): Task {
+  return {
+    code: tarea.codigo,
+    reference: tarea.referencia,
+    comment: tarea.comentario,
+    principal_action_url: tarea.urlAccionPrincipal,
+    responsible_id: tarea.idResponsable,
+    documents: tarea.documentos?.map(toDocument),
+    suspension: tarea.suspension && {
+      start_date: tarea.suspension.fechaInicio,
+      documents: tarea.suspension.documentos?.map(toDocument),
+    },
+  };
+}
+
+function toDocument(documento: Documento): Document {
+  return { type: documento.tipo, url: documento.url, filename: documento.nombreArchivo };
+}
+
+function toPrincipal(beneficiario: Beneficiario): Principal {
+  return { type: beneficiario.tipo, rut: beneficiario.rut, email: beneficiario.email };
+}
+
+function toCreator(persona: Persona): Creator {
   return {
     rut: persona.rut,
     first_name: persona.nombre,

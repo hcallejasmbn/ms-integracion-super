@@ -22,6 +22,15 @@ export class ProcesoSuperDao {
     return this.db.select().from(procesosSuper).orderBy(asc(procesosSuper.codigo));
   }
 
+  async existe(codigo: string): Promise<boolean> {
+    const [fila] = await this.db
+      .select({ codigo: procesosSuper.codigo })
+      .from(procesosSuper)
+      .where(eq(procesosSuper.codigo, codigo))
+      .limit(1);
+    return fila !== undefined;
+  }
+
   async buscarPorCodigo(codigo: string): Promise<ProcesoSuperConEstados | undefined> {
     return this.db.query.procesosSuper.findFirst({
       where: eq(procesosSuper.codigo, codigo),

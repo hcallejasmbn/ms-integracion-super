@@ -9,7 +9,7 @@ export const logEjecucion = superSchema.table(
     // bigint porque es la tabla que más crece
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     trackId: uuid("track_id").notNull(),
-    // CREAR_SOLICITUD, NOTIFICAR_ESTADO, OBTENER_TOKEN
+    // OBTENER_TOKEN, CREAR_SOLICITUD, ACTUALIZAR_SOLICITUD
     operacion: varchar("operacion", { length: 50 }).notNull(),
     intento: integer("intento").notNull().default(1),
     url: varchar("url", { length: 500 }).notNull(),

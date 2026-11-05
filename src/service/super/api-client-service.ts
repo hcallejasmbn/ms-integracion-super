@@ -22,7 +22,7 @@ export class ApiClientService {
     };
 
     const { response, text } = await this.fetchConTraza(
-      EnvConfig.miSuperEndpointToken,
+      EnvConfig.miSuperUrlToken,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

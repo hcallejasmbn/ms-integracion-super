@@ -1,0 +1,830 @@
+{
+  "id": "8ff56328-6854-42ec-8081-7a178cc94956",
+  "prevId": "9b4f623a-1b3d-4c0e-ac3c-4c1d937c9b76",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "super.actividades": {
+      "name": "actividades",
+      "schema": "super",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "actividades_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "super",
+            "type": "always"
+          }
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proceso_codigo": {
+          "name": "proceso_codigo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "actividades_proceso_codigo_idx": {
+          "name": "actividades_proceso_codigo_idx",
+          "columns": [
+            {
+              "expression": "proceso_codigo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "actividades_proceso_codigo_procesos_codigo_fk": {
+          "name": "actividades_proceso_codigo_procesos_codigo_fk",
+          "tableFrom": "actividades",
+          "columnsFrom": [
+            "proceso_codigo"
+          ],
+          "tableTo": "procesos",
+          "schemaTo": "super",
+          "columnsTo": [
+            "codigo"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.actividades_estados_super": {
+      "name": "actividades_estados_super",
+      "schema": "super",
+      "columns": {
+        "actividad_id": {
+          "name": "actividad_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "estado_super_id": {
+          "name": "estado_super_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "actividades_estados_super_actividad_id_actividades_id_fk": {
+          "name": "actividades_estados_super_actividad_id_actividades_id_fk",
+          "tableFrom": "actividades_estados_super",
+          "columnsFrom": [
+            "actividad_id"
+          ],
+          "tableTo": "actividades",
+          "schemaTo": "super",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "actividades_estados_super_estado_super_id_estados_super_id_fk": {
+          "name": "actividades_estados_super_estado_super_id_estados_super_id_fk",
+          "tableFrom": "actividades_estados_super",
+          "columnsFrom": [
+            "estado_super_id"
+          ],
+          "tableTo": "estados_super",
+          "schemaTo": "super",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.carga_actividades_expedientes": {
+      "name": "carga_actividades_expedientes",
+      "schema": "super",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "carga_actividades_expedientes_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "super",
+            "type": "always"
+          }
+        },
+        "codigo_expediente": {
+          "name": "codigo_expediente",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actividad_id": {
+          "name": "actividad_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_actividad": {
+          "name": "fecha_actividad",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "responsable": {
+          "name": "responsable",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "comentario": {
+          "name": "comentario",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_carga": {
+          "name": "fecha_carga",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "carga_actividades_expedientes_fecha_carga_idx": {
+          "name": "carga_actividades_expedientes_fecha_carga_idx",
+          "columns": [
+            {
+              "expression": "fecha_carga",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "carga_actividades_expedientes_movimiento_uq": {
+          "name": "carga_actividades_expedientes_movimiento_uq",
+          "columns": [
+            "codigo_expediente",
+            "actividad_id",
+            "fecha_actividad"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.estados_super": {
+      "name": "estados_super",
+      "schema": "super",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "estados_super_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "super",
+            "type": "always"
+          }
+        },
+        "proceso_super_codigo": {
+          "name": "proceso_super_codigo",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stage_code": {
+          "name": "stage_code",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status_code": {
+          "name": "status_code",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subtask": {
+          "name": "subtask",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "use_working_days": {
+          "name": "use_working_days",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "responsible_type": {
+          "name": "responsible_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "suspension_type": {
+          "name": "suspension_type",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "estados_super_proceso_super_codigo_procesos_super_codigo_fk": {
+          "name": "estados_super_proceso_super_codigo_procesos_super_codigo_fk",
+          "tableFrom": "estados_super",
+          "columnsFrom": [
+            "proceso_super_codigo"
+          ],
+          "tableTo": "procesos_super",
+          "schemaTo": "super",
+          "columnsTo": [
+            "codigo"
+          ],
+          "onUpdate": "cascade",
+          "onDelete": "restrict"
+        },
+        "estados_super_stage_code_stage_codes_code_fk": {
+          "name": "estados_super_stage_code_stage_codes_code_fk",
+          "tableFrom": "estados_super",
+          "columnsFrom": [
+            "stage_code"
+          ],
+          "tableTo": "stage_codes",
+          "schemaTo": "super",
+          "columnsTo": [
+            "code"
+          ],
+          "onUpdate": "cascade",
+          "onDelete": "restrict"
+        },
+        "estados_super_status_code_status_codes_code_fk": {
+          "name": "estados_super_status_code_status_codes_code_fk",
+          "tableFrom": "estados_super",
+          "columnsFrom": [
+            "status_code"
+          ],
+          "tableTo": "status_codes",
+          "schemaTo": "super",
+          "columnsTo": [
+            "code"
+          ],
+          "onUpdate": "cascade",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "estados_super_proceso_code_uq": {
+          "name": "estados_super_proceso_code_uq",
+          "columns": [
+            "proceso_super_codigo",
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.expedientes_tramitando": {
+      "name": "expedientes_tramitando",
+      "schema": "super",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "expedientes_tramitando_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "super",
+            "type": "always"
+          }
+        },
+        "codigo_expediente": {
+          "name": "codigo_expediente",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actividad_id": {
+          "name": "actividad_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado_super_id": {
+          "name": "estado_super_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_actividad": {
+          "name": "fecha_actividad",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_insercion": {
+          "name": "fecha_insercion",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "estado_notificacion": {
+          "name": "estado_notificacion",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDIENTE'"
+        },
+        "fecha_notificacion": {
+          "name": "fecha_notificacion",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "expedientes_tramitando_ultimo_idx": {
+          "name": "expedientes_tramitando_ultimo_idx",
+          "columns": [
+            {
+              "expression": "codigo_expediente",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"fecha_actividad\" desc",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "expedientes_tramitando_pendientes_idx": {
+          "name": "expedientes_tramitando_pendientes_idx",
+          "columns": [
+            {
+              "expression": "fecha_actividad",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"super\".\"expedientes_tramitando\".\"estado_notificacion\" in ('PENDIENTE', 'ERROR')",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "expedientes_tramitando_codigo_expediente_solicitudes_super_codigo_expediente_fk": {
+          "name": "expedientes_tramitando_codigo_expediente_solicitudes_super_codigo_expediente_fk",
+          "tableFrom": "expedientes_tramitando",
+          "columnsFrom": [
+            "codigo_expediente"
+          ],
+          "tableTo": "solicitudes_super",
+          "schemaTo": "super",
+          "columnsTo": [
+            "codigo_expediente"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "expedientes_tramitando_actividad_id_actividades_id_fk": {
+          "name": "expedientes_tramitando_actividad_id_actividades_id_fk",
+          "tableFrom": "expedientes_tramitando",
+          "columnsFrom": [
+            "actividad_id"
+          ],
+          "tableTo": "actividades",
+          "schemaTo": "super",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "expedientes_tramitando_estado_super_id_estados_super_id_fk": {
+          "name": "expedientes_tramitando_estado_super_id_estados_super_id_fk",
+          "tableFrom": "expedientes_tramitando",
+          "columnsFrom": [
+            "estado_super_id"
+          ],
+          "tableTo": "estados_super",
+          "schemaTo": "super",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "expedientes_tramitando_cambio_uq": {
+          "name": "expedientes_tramitando_cambio_uq",
+          "columns": [
+            "codigo_expediente",
+            "actividad_id",
+            "fecha_actividad"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.log_ejecucion": {
+      "name": "log_ejecucion",
+      "schema": "super",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "log_ejecucion_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "super",
+            "type": "always"
+          }
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operacion": {
+          "name": "operacion",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "intento": {
+          "name": "intento",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "url": {
+          "name": "url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metodo": {
+          "name": "metodo",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_json": {
+          "name": "request_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_status": {
+          "name": "response_status",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_body": {
+          "name": "response_body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resultado": {
+          "name": "resultado",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_inicio": {
+          "name": "fecha_inicio",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "duracion_ms": {
+          "name": "duracion_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "log_ejecucion_track_id_idx": {
+          "name": "log_ejecucion_track_id_idx",
+          "columns": [
+            {
+              "expression": "track_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.procesos": {
+      "name": "procesos",
+      "schema": "super",
+      "columns": {
+        "codigo": {
+          "name": "codigo",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.procesos_super": {
+      "name": "procesos_super",
+      "schema": "super",
+      "columns": {
+        "codigo": {
+          "name": "codigo",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.solicitudes_super": {
+      "name": "solicitudes_super",
+      "schema": "super",
+      "columns": {
+        "codigo_expediente": {
+          "name": "codigo_expediente",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ms_application_id": {
+          "name": "ms_application_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_creacion": {
+          "name": "fecha_creacion",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "solicitudes_super_ms_application_id_unique": {
+          "name": "solicitudes_super_ms_application_id_unique",
+          "columns": [
+            "ms_application_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.stage_codes": {
+      "name": "stage_codes",
+      "schema": "super",
+      "columns": {
+        "code": {
+          "name": "code",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "stage_codes_value_unique": {
+          "name": "stage_codes_value_unique",
+          "columns": [
+            "value"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "super.status_codes": {
+      "name": "status_codes",
+      "schema": "super",
+      "columns": {
+        "code": {
+          "name": "code",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "status_codes_value_unique": {
+          "name": "status_codes_value_unique",
+          "columns": [
+            "value"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "super": "super"
+  },
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

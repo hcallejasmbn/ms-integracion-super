@@ -29,6 +29,48 @@
       "when": 1793642646402,
       "tag": "0003_crear_expedientes_solicitudes_log",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793708406669,
+      "tag": "0004_cargar_proceso_concesion_olp",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793820018494,
+      "tag": "0005_crear_carga_actividades_expedientes",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793875537261,
+      "tag": "0006_agregar_actividades_concesion_olp",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793883683947,
+      "tag": "0007_agregar_proceso_actividad_carga",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793883684752,
+      "tag": "0008_quitar_actividad_id_carga",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793886070558,
+      "tag": "0009_estado_super_en_actividades",
+      "breakpoints": true
     }
   ]
 }
