@@ -1,4 +1,4 @@
-import { asc, desc, eq, getTableColumns, gte } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte } from "drizzle-orm";
 import { getDb, type Database } from "@/config/db.config";
 import { actividades } from "../entity/actividad.entity";
 import {
@@ -7,8 +7,9 @@ import {
   type NuevaCargaActividadExpedienteEntity,
 } from "../entity/carga-actividad-expediente.entity";
 
-// Movimiento con el nombre de su actividad; null si actividad_id no existe en actividades (la carga no tiene FK)
-export type CargaConActividadEntity = CargaActividadExpedienteEntity & { actividadNombre: string | null };
+// Movimiento con el id de su actividad; null si proceso + actividad no existe en actividades
+// (la carga no tiene FK)
+export type CargaConActividadEntity = CargaActividadExpedienteEntity & { actividadId: number | null };
 
 export class CargaActividadExpedienteDao {
   constructor(private readonly database?: Database) { }
@@ -36,16 +37,22 @@ export class CargaActividadExpedienteDao {
       );
   }
 
-  // Último movimiento de cada expediente, con el nombre de la actividad para compararla.
+  // Último movimiento de cada expediente, con el id de la actividad para buscar su estado SUPER.
   // Si la tabla acumula varias cargas, solo cuenta el más reciente
   async listarUltimoPorExpediente(): Promise<CargaConActividadEntity[]> {
     return this.db
       .selectDistinctOn([cargaActividadesExpedientes.codigoExpediente], {
         ...getTableColumns(cargaActividadesExpedientes),
-        actividadNombre: actividades.nombre,
+        actividadId: actividades.id,
       })
       .from(cargaActividadesExpedientes)
-      .leftJoin(actividades, eq(actividades.id, cargaActividadesExpedientes.actividadId))
+      .leftJoin(
+        actividades,
+        and(
+          eq(actividades.procesoCodigo, cargaActividadesExpedientes.proceso),
+          eq(actividades.nombre, cargaActividadesExpedientes.actividad),
+        ),
+      )
       .orderBy(
         asc(cargaActividadesExpedientes.codigoExpediente),
         desc(cargaActividadesExpedientes.fechaActividad),

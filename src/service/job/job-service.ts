@@ -1,4 +1,4 @@
-import { ActividadEstadoSuperDao } from "@/core/repository/dao/actividad-estado-super.dao";
+import { ActividadDao } from "@/core/repository/dao/actividad.dao";
 import {
   CargaActividadExpedienteDao,
   type CargaConActividadEntity,
@@ -9,10 +9,13 @@ import {
 } from "@/core/repository/dao/expediente-tramitando.dao";
 import type { EstadoSuperEntity } from "@/core/repository/entity/estado-super.entity";
 
+// Movimiento cuya actividad existe en el proceso
+type MovimientoConActividad = CargaConActividadEntity & { actividadId: number };
+
 // Movimiento que cambió de actividad y el estado SUPER que se informará.
 // estadoSuper es undefined si la actividad no tiene estado configurado
 export interface CambioActividad {
-  readonly movimiento: CargaConActividadEntity;
+  readonly movimiento: MovimientoConActividad;
   readonly estadoSuper?: EstadoSuperEntity;
 }
 
@@ -20,7 +23,7 @@ export class JobService {
   constructor(
     private readonly cargaActividadExpedienteDao = new CargaActividadExpedienteDao(),
     private readonly expedienteTramitandoDao = new ExpedienteTramitandoDao(),
-    private readonly actividadEstadoSuperDao = new ActividadEstadoSuperDao(),
+    private readonly actividadDao = new ActividadDao(),
   ) { }
 
   /**
@@ -36,18 +39,16 @@ export class JobService {
   }
 
   // Una sola consulta trae la última actividad registrada de todos los expedientes cargados
-  private async detectarCambios(
-    movimientos: CargaConActividadEntity[],
-  ): Promise<CargaConActividadEntity[]> {
+  private async detectarCambios(movimientos: CargaConActividadEntity[]): Promise<MovimientoConActividad[]> {
     const ultimos = await this.expedienteTramitandoDao.listarUltimosPorExpedientes(
       movimientos.map((movimiento) => movimiento.codigoExpediente),
     );
     return movimientos.filter(actividadConocida).filter(cambioDeActividad(actividadPorExpediente(ultimos)));
   }
 
-  // El estado SUPER sale de la configuración actividades_estados_super de la actividad
-  private async obtenerEstadoSuper(movimiento: CargaConActividadEntity): Promise<CambioActividad> {
-    const estadoSuper = await this.actividadEstadoSuperDao.buscarEstadoPorActividad(movimiento.actividadId);
+  // El estado SUPER es el que la actividad tiene asignado (actividades.estado_super_id)
+  private async obtenerEstadoSuper(movimiento: MovimientoConActividad): Promise<CambioActividad> {
+    const estadoSuper = await this.actividadDao.buscarEstadoSuper(movimiento.actividadId);
     return { movimiento, estadoSuper };
   }
 }
@@ -56,12 +57,13 @@ function actividadPorExpediente(ultimos: ExpedienteTramitandoConActividadEntity[
   return new Map(ultimos.map((ultimo) => [ultimo.codigoExpediente, ultimo.actividadNombre]));
 }
 
-// Sin nombre no se puede comparar: el actividad_id cargado no existe en actividades
-function actividadConocida(movimiento: CargaConActividadEntity): boolean {
-  if (movimiento.actividadNombre === null) {
+// La actividad cargada debe existir en el proceso: sin ella no hay estado SUPER ni registro en expedientes_tramitando
+function actividadConocida(movimiento: CargaConActividadEntity): movimiento is MovimientoConActividad {
+  if (movimiento.actividadId === null) {
     console.warn("Movimiento con actividad desconocida; se omite", {
       codigoExpediente: movimiento.codigoExpediente,
-      actividadId: movimiento.actividadId,
+      proceso: movimiento.proceso,
+      actividad: movimiento.actividad,
     });
     return false;
   }
@@ -70,5 +72,5 @@ function actividadConocida(movimiento: CargaConActividadEntity): boolean {
 
 // Misma actividad (por nombre): no hay nada que informar. Un expediente sin registros siempre es un cambio
 function cambioDeActividad(actividades: Map<string, string>): (movimiento: CargaConActividadEntity) => boolean {
-  return (movimiento) => actividades.get(movimiento.codigoExpediente) !== movimiento.actividadNombre;
+  return (movimiento) => actividades.get(movimiento.codigoExpediente) !== movimiento.actividad;
 }

@@ -4,3 +4,10 @@ export class ProcesoNoEncontradoError extends Error {
     this.name = "ProcesoNoEncontradoError";
   }
 }
+
+export class ActividadNoEncontradaError extends Error {
+  constructor(id: number) {
+    super(`No existe la actividad ${id}`);
+    this.name = "ActividadNoEncontradaError";
+  }
+}

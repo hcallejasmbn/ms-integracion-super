@@ -24,7 +24,7 @@ export function registerEstadosSuperProcesoPaths(registry: OpenAPIRegistry) {
     tags: ["Procesos"],
     summary: "Lista el estado SUPER configurado para cada actividad de un proceso",
     description:
-      "Cruza las actividades del proceso con actividades_estados_super. " +
+      "Devuelve el estado SUPER asignado a cada actividad del proceso (actividades.estado_super_id). " +
       "Incluye todas las actividades: las que no tienen estado configurado vienen con estadoSuper null.",
     request: { params: ProcesoParamsSchema },
     responses: {

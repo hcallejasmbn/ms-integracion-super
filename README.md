@@ -53,8 +53,7 @@ La carpeta `drizzle/` es el historial de migraciones y se versiona en git. Cada 
 ```mermaid
 erDiagram
     procesos ||--o{ actividades : "tiene"
-    actividades ||--o| actividades_estados_super : "se informa como"
-    estados_super ||--o{ actividades_estados_super : "asignado a"
+    estados_super |o--o| actividades : "se informa en"
     procesos_super ||--o{ estados_super : "tiene"
     stage_codes ||--o{ estados_super : "clasifica"
     status_codes ||--o{ estados_super : "clasifica"
@@ -70,6 +69,7 @@ erDiagram
         integer id PK "autogenerado"
         text nombre
         text proceso_codigo FK
+        integer estado_super_id FK "UK, opcional"
     }
     procesos_super {
         varchar codigo PK "asignado al insertar"
@@ -95,10 +95,6 @@ erDiagram
         varchar code PK "p. ej. 1"
         varchar value UK "p. ej. ENTERED"
     }
-    actividades_estados_super {
-        integer actividad_id PK, FK
-        integer estado_super_id FK
-    }
     solicitudes_super {
         varchar codigo_expediente PK "idSolicitudServicio"
         integer ms_application_id UK "ID de SUPER"
@@ -119,7 +115,8 @@ erDiagram
     carga_actividades_expedientes {
         bigint id PK "autogenerado"
         varchar codigo_expediente "sin FK"
-        integer actividad_id "sin FK, se compara por nombre"
+        varchar proceso "codigo del proceso, sin FK"
+        varchar actividad "nombre, se compara por nombre"
         timestamptz fecha_actividad
         varchar responsable "opcional"
         text comentario "opcional"
@@ -151,7 +148,7 @@ Las tablas se agrupan en cinco áreas: proceso interno, configuración de SUPER,
 | Tabla | Columnas | Notas |
 |---|---|---|
 | `procesos` | `codigo` (PK), `nombre` | El código se asigna al insertar |
-| `actividades` | `id` (PK autogenerada), `nombre`, `proceso_codigo` (FK) | Cada actividad pertenece a un único proceso |
+| `actividades` | `id` (PK autogenerada), `nombre`, `proceso_codigo` (FK), `estado_super_id` (FK, único, opcional) | Cada actividad pertenece a un único proceso. `estado_super_id` es el estado SUPER que se informa cuando un expediente pasa por ella; si es null, la actividad no se informa |
 
 **Configuración de SUPER**
 
@@ -161,13 +158,12 @@ Las tablas se agrupan en cinco áreas: proceso interno, configuración de SUPER,
 | `estados_super` | `id` (PK autogenerada), `proceso_super_codigo` (FK), `code`, `stage_code` (FK), `status`, `status_code` (FK), `subtask`, `use_working_days`, `responsible_type`, `suspension_type` | Estados que se informan a SUPER. Las columnas en inglés son los campos del manual de SUPER y se guardan sin validar formato |
 | `stage_codes` | `code` (PK), `value` (único) | Catálogo de `STAGE_CODE`, por ejemplo `1` → `ENTRY` |
 | `status_codes` | `code` (PK), `value` (único) | Catálogo de `STATUS_CODE`, por ejemplo `1` → `ENTERED` |
-| `actividades_estados_super` | `actividad_id` (PK, FK), `estado_super_id` (FK) | Qué estado SUPER se informa en cada actividad. Una actividad sin fila no se informa |
 
 **Carga diaria**
 
 | Tabla | Columnas | Notas |
 |---|---|---|
-| `carga_actividades_expedientes` | `id` (PK autogenerada), `codigo_expediente`, `actividad_id`, `fecha_actividad`, `responsable`, `comentario`, `fecha_carga` | Movimientos de actividad que un procedimiento externo carga cada día. Es solo de entrada y no tiene FK, para que una carga con datos desconocidos no falle. Único por `codigo_expediente`, `actividad_id`, `fecha_actividad` |
+| `carga_actividades_expedientes` | `id` (PK autogenerada), `codigo_expediente`, `proceso`, `actividad`, `fecha_actividad`, `responsable`, `comentario`, `fecha_carga` | Movimientos de actividad que un procedimiento externo carga cada día. Es solo de entrada y no tiene FK, para que una carga con datos desconocidos no falle. `proceso` es el código del proceso y `actividad` el nombre de la actividad: la actividad se identifica por ambos, no por id. Único por `codigo_expediente`, `actividad`, `fecha_actividad` |
 
 **Expedientes**
 
@@ -189,14 +185,14 @@ Las tablas se agrupan en cinco áreas: proceso interno, configuración de SUPER,
 - `estados_super.code` es único dentro de cada proceso SUPER: el mismo código puede repetirse en otro proceso.
 - `stage_code` y `status_code` solo aceptan códigos registrados en `stage_codes` y `status_codes`, y guardan el código interno (`"1"`), no el valor (`ENTRY`).
 - Las FK de `estados_super` usan `ON UPDATE CASCADE` (si cambia un código, los estados lo siguen) y `ON DELETE RESTRICT` (no se puede borrar un proceso ni un código en uso).
-- Una actividad informa como máximo un estado SUPER.
+- Una actividad y un estado SUPER se relacionan 1:1: una actividad tiene como máximo un estado SUPER (`actividades.estado_super_id`) y un estado SUPER pertenece a una sola actividad (restricción única). La FK usa `ON DELETE RESTRICT`: no se puede borrar un estado asignado a una actividad.
 
 **Carga diaria**
 
 - El procedimiento externo carga solo el último movimiento de cada expediente. Si un expediente se movió dos veces en el día, solo se informa la última actividad.
 - Si la tabla acumula varias cargas, el job toma solo el movimiento más reciente de cada expediente.
 - El job compara la actividad cargada con la última de `expedientes_tramitando` **por nombre**, no por `id`. El `id` es interno y un cambio de flujo puede darle otro a la misma actividad.
-- Un movimiento con un `actividad_id` que no existe en `actividades` se omite y queda un aviso en la consola.
+- El job busca la actividad en `actividades` por `proceso` + `actividad` (código del proceso y nombre). Si no existe, el movimiento se omite y queda un aviso en la consola.
 - Un expediente sin registros en `expedientes_tramitando` siempre cuenta como cambio.
 
 **Expedientes**
@@ -219,7 +215,7 @@ Las tablas se agrupan en cinco áreas: proceso interno, configuración de SUPER,
   Los que SUPER agregue después los ingresa el usuario.
 - La migración `0004` carga el proceso `9` → `Concesion OLP` en `procesos` y sus 26 actividades en `actividades`, desde `Ingresar Solicitud` hasta `Ingresa datos CEE y valor renta concesional fijada`. Los `id` de las actividades los asigna la identidad en el orden de la lista.
 - La migración `0006` agrega otras 13 actividades al proceso `9`, desde `Firma Seremi` hasta `Recibir Notificación - Resolución`.
-- El resto de las tablas no tiene carga inicial. La configuración de `procesos_super`, `estados_super` y `actividades_estados_super` se cargará cuando esté definida la lógica de negocio final.
+- El resto de las tablas no tiene carga inicial. `procesos_super` y `estados_super` se cargan con `POST /api/super/procesos` y `POST /api/super/procesos/{codigo}/estados`, y `actividades.estado_super_id` con `PUT /api/actividades/{id}/estado-super`.
 
 ## Docker
 
@@ -287,8 +283,11 @@ src/
 │   ├── (presentacion)/          Capa de presentación: páginas para el usuario
 │   │   └── page.tsx             → se sirve en /
 │   ├── api/                     Capa de exposición: endpoints REST
+│   │   ├── actividades/         Asignación del estado SUPER de cada actividad
 │   │   ├── procesos/            Procesos y sus actividades
-│   │   ├── super/procesos/      Estados SUPER de cada proceso SUPER
+│   │   ├── super/procesos/      Procesos SUPER y sus estados
+│   │   ├── super/stage-codes/   Catálogo STAGE_CODE
+│   │   ├── super/status-codes/  Catálogo STATUS_CODE
 │   │   ├── super/solicitudes/
 │   │   │   ├── route.ts         Handler HTTP
 │   │   │   └── solicitudes.schema.ts  Contrato: esquemas Zod y registro OpenAPI
@@ -332,7 +331,12 @@ En Next.js cada carpeta dentro de `app/` forma parte de la URL. Los paréntesis 
 | `GET` | `/api/procesos` | Lista los procesos cargados |
 | `GET` | `/api/procesos/{codigo}/actividades` | Lista las actividades de un proceso |
 | `GET` | `/api/procesos/{codigo}/estados-super` | Lista el estado SUPER configurado para cada actividad de un proceso |
+| `PUT` | `/api/actividades/{id}/estado-super` | Asigna un estado SUPER existente a una actividad |
+| `POST` | `/api/super/procesos` | Crea un proceso SUPER |
+| `POST` | `/api/super/procesos/{codigo}/estados` | Crea un estado SUPER (séxtupla) en un proceso SUPER, sin asignarlo a una actividad |
 | `GET` | `/api/super/procesos/{codigo}/estados` | Lista los estados SUPER configurados para un proceso SUPER |
+| `GET` | `/api/super/stage-codes` | Lista el catálogo de `STAGE_CODE` |
+| `GET` | `/api/super/status-codes` | Lista el catálogo de `STATUS_CODE` |
 | `POST` | `/api/super/solicitudes` | Recibe una solicitud y la crea en Mi Súper de forma asíncrona |
 | `GET` | `/api/openapi` | Especificación OpenAPI 3.1 en JSON |
 | `GET` | `/api/docs` | Documentación interactiva de la API (Scalar) |
@@ -361,7 +365,7 @@ Devuelve las actividades del proceso en el orden en que se crearon.
 
 ### `GET /api/procesos/{codigo}/estados-super`
 
-Devuelve cada actividad del proceso con el estado SUPER que se informa cuando un expediente pasa por ella, según `actividades_estados_super`. Incluye todas las actividades: las que no tienen estado configurado vienen con `estadoSuper: null`, lo que sirve para revisar qué falta configurar. `estadoSuper` tiene la misma forma que en `GET /api/super/procesos/{codigo}/estados`.
+Devuelve cada actividad del proceso con el estado SUPER que se informa cuando un expediente pasa por ella, según `actividades.estado_super_id`. Incluye todas las actividades: las que no tienen estado configurado vienen con `estadoSuper: null`, lo que sirve para revisar qué falta configurar. `estadoSuper` tiene la misma forma que en `GET /api/super/procesos/{codigo}/estados`.
 
 ```json
 [
@@ -376,6 +380,71 @@ Devuelve cada actividad del proceso con el estado SUPER que se informa cuando un
 | 200 | El proceso existe |
 | 400 | El código viene vacío |
 | 404 | El proceso no existe |
+
+### `PUT /api/actividades/{id}/estado-super`
+
+Asigna un estado SUPER existente (de `estados_super`) a la actividad, guardándolo en `actividades.estado_super_id`. Si la actividad ya tenía un estado, lo reemplaza. Repetir la misma asignación no falla.
+
+```bash
+curl -X PUT http://localhost:3000/api/actividades/3/estado-super \
+  -H 'Content-Type: application/json' -d '{"estadoSuperId": 1}'
+```
+
+Responde `200` con la actividad y su estado, con la misma forma que cada elemento de `GET /api/procesos/{codigo}/estados-super`.
+
+| Estado | Cuándo |
+|---|---|
+| 400 | El id no es un entero positivo, o el cuerpo no es JSON o no trae `estadoSuperId` válido |
+| 404 | La actividad no existe |
+| 409 | El estado SUPER ya está asignado a otra actividad (la relación es 1:1) |
+| 422 | El estado SUPER no existe |
+
+### `POST /api/super/procesos`
+
+Crea un proceso SUPER. El código lo asigna quien lo crea y se guarda sin espacios al inicio ni al final.
+
+```bash
+curl -X POST http://localhost:3000/api/super/procesos \
+  -H 'Content-Type: application/json' -d '{"codigo":"OLP","nombre":"Concesión onerosa de largo plazo"}'
+```
+
+| Estado | Cuándo |
+|---|---|
+| 201 | Proceso creado; responde `{ codigo, nombre }` |
+| 400 | El cuerpo no es JSON, falta un campo o supera su largo (`codigo` 50, `nombre` 150) |
+| 409 | Ya existe un proceso SUPER con ese código |
+
+### `POST /api/super/procesos/{codigo}/estados`
+
+Crea una séxtupla en el proceso SUPER. Queda sin actividad; se asigna después con `PUT /api/actividades/{id}/estado-super`. Los campos se guardan tal como los define SUPER: solo se valida que vengan y quepan en su columna.
+
+| Campo | Requerido | Largo máximo | Notas |
+|---|---|---|---|
+| `code` | Sí | 20 | Único dentro del proceso SUPER, por ejemplo `IWSP-1` |
+| `stageCode` | Sí | 50 | Código interno de `stage_codes` (por ejemplo `"1"` para `ENTRY`) |
+| `status` | Sí | 150 | |
+| `statusCode` | Sí | 50 | Código interno de `status_codes` (por ejemplo `"1"` para `ENTERED`) |
+| `subtask` | Sí | 255 | |
+| `useWorkingDays` | Sí | 50 | Por ejemplo `DÍAS HÁBILES` |
+| `responsibleType` | Sí | 50 | Por ejemplo `TITULAR` |
+| `suspensionType` | No | 10 | Causal de suspensión; vacío o `null` es sin causal |
+
+```bash
+curl -X POST http://localhost:3000/api/super/procesos/OLP/estados \
+  -H 'Content-Type: application/json' \
+  -d '{"code":"IWSP-1","stageCode":"1","status":"Solicitud ingresada","statusCode":"1",
+       "subtask":"Solicitud recibida","useWorkingDays":"DÍAS HÁBILES","responsibleType":"TITULAR"}'
+```
+
+| Estado | Cuándo |
+|---|---|
+| 201 | Estado creado; responde con la misma forma que `GET /api/super/procesos/{codigo}/estados` |
+| 400 | El cuerpo no es JSON, falta un campo o supera su largo |
+| 404 | El proceso SUPER no existe |
+| 409 | El proceso SUPER ya tiene un estado con ese `code` |
+| 422 | `stageCode` o `statusCode` no existen en su catálogo |
+
+Para configurar un proceso desde cero: crear el proceso SUPER, crear sus estados y asignar cada uno a su actividad.
 
 ### `GET /api/super/procesos/{codigo}/estados`
 
@@ -396,6 +465,16 @@ Devuelve los estados (séxtuplas) configurados para un proceso SUPER, en el orde
 | 200 | El proceso SUPER existe. Si no tiene estados, devuelve `[]` |
 | 400 | El código viene vacío |
 | 404 | El proceso SUPER no existe |
+
+### `GET /api/super/stage-codes` y `GET /api/super/status-codes`
+
+Devuelven los catálogos `stage_codes` y `status_codes`. `code` es el código interno que guarda `estados_super`, y `value` es el valor que usa SUPER.
+
+```json
+[{ "code": "1", "value": "ENTRY" }, { "code": "2", "value": "ADMISSIBILITY" }]
+```
+
+El orden es por `code` como texto, así que en `status-codes` el `10` aparece antes que el `2`.
 
 ### `POST /api/super/solicitudes`
 

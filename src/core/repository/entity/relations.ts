@@ -1,6 +1,5 @@
 import { relations } from "drizzle-orm";
 import { actividades } from "./actividad.entity";
-import { actividadesEstadosSuper } from "./actividad-estado-super.entity";
 import { estadosSuper } from "./estado-super.entity";
 import { expedientesTramitando } from "./expediente-tramitando.entity";
 import { procesos } from "./proceso.entity";
@@ -19,8 +18,10 @@ export const actividadesRelations = relations(actividades, ({ one }) => ({
     fields: [actividades.procesoCodigo],
     references: [procesos.codigo],
   }),
-  // Sin fields: la FK está en actividades_estados_super
-  configuracionSuper: one(actividadesEstadosSuper),
+  estadoSuper: one(estadosSuper, {
+    fields: [actividades.estadoSuperId],
+    references: [estadosSuper.id],
+  }),
 }));
 
 export const procesosSuperRelations = relations(procesosSuper, ({ many }) => ({
@@ -28,6 +29,8 @@ export const procesosSuperRelations = relations(procesosSuper, ({ many }) => ({
 }));
 
 export const estadosSuperRelations = relations(estadosSuper, ({ one }) => ({
+  // Sin fields: la FK está en actividades.estado_super_id
+  actividad: one(actividades),
   procesoSuper: one(procesosSuper, {
     fields: [estadosSuper.procesoSuperCodigo],
     references: [procesosSuper.codigo],
@@ -49,17 +52,6 @@ export const stageCodesRelations = relations(stageCodes, ({ many }) => ({
 
 export const statusCodesRelations = relations(statusCodes, ({ many }) => ({
   estados: many(estadosSuper),
-}));
-
-export const actividadesEstadosSuperRelations = relations(actividadesEstadosSuper, ({ one }) => ({
-  actividad: one(actividades, {
-    fields: [actividadesEstadosSuper.actividadId],
-    references: [actividades.id],
-  }),
-  estadoSuper: one(estadosSuper, {
-    fields: [actividadesEstadosSuper.estadoSuperId],
-    references: [estadosSuper.id],
-  }),
 }));
 
 export const solicitudesSuperRelations = relations(solicitudesSuper, ({ many }) => ({

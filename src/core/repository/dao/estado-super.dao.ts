@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { getDb, type Database } from "@/config/db.config";
 import { estadosSuper, type EstadoSuperEntity, type NuevoEstadoSuperEntity } from "../entity/estado-super.entity";
 import type { StageCodeEntity } from "../entity/stage-code.entity";
@@ -37,6 +37,28 @@ export class EstadoSuperDao {
       where: eq(estadosSuper.procesoSuperCodigo, procesoSuperCodigo),
       with: { stageCodeInfo: true, statusCodeInfo: true },
       orderBy: (estados, { asc }) => [asc(estados.id)],
+    });
+  }
+
+  async existe(id: number): Promise<boolean> {
+    const [fila] = await this.db.select({ id: estadosSuper.id }).from(estadosSuper).where(eq(estadosSuper.id, id)).limit(1);
+    return fila !== undefined;
+  }
+
+  // code es único dentro de cada proceso SUPER
+  async existeCodeEnProceso(procesoSuperCodigo: string, code: string): Promise<boolean> {
+    const [fila] = await this.db
+      .select({ id: estadosSuper.id })
+      .from(estadosSuper)
+      .where(and(eq(estadosSuper.procesoSuperCodigo, procesoSuperCodigo), eq(estadosSuper.code, code)))
+      .limit(1);
+    return fila !== undefined;
+  }
+
+  async buscarConCatalogos(id: number): Promise<EstadoSuperConCatalogos | undefined> {
+    return this.db.query.estadosSuper.findFirst({
+      where: eq(estadosSuper.id, id),
+      with: { stageCodeInfo: true, statusCodeInfo: true },
     });
   }
 }
