@@ -1,4 +1,5 @@
 import {
+  EstadoSuperDeOtroProcesoError,
   EstadoSuperNoEncontradoError,
   EstadoSuperYaAsignadoError,
 } from "@/core/domain/configuracion-super/configuracion-super.errors";
@@ -8,7 +9,7 @@ import type { ErrorResponse } from "../../../openapi/common.schema";
 import {
   ActividadParamsSchema,
   AsignarEstadoSuperSchema,
-  type ActividadConEstadoSuperResponse,
+  type ActividadResponse,
 } from "./estado-super.schema";
 
 const procesoService = new ProcesoService();
@@ -33,7 +34,7 @@ export async function PUT(request: Request, ctx: RouteContext<"/api/actividades/
   }
 
   try {
-    const response: ActividadConEstadoSuperResponse = await procesoService.asignarEstadoSuper(
+    const response: ActividadResponse = await procesoService.asignarEstadoSuper(
       params.data.id,
       body.data.estadoSuperId,
     );
@@ -41,6 +42,7 @@ export async function PUT(request: Request, ctx: RouteContext<"/api/actividades/
   } catch (error) {
     if (error instanceof ActividadNoEncontradaError) return errorResponse(404, error.message);
     if (error instanceof EstadoSuperNoEncontradoError) return errorResponse(422, error.message);
+    if (error instanceof EstadoSuperDeOtroProcesoError) return errorResponse(422, error.message);
     if (error instanceof EstadoSuperYaAsignadoError) return errorResponse(409, error.message);
     throw error;
   }

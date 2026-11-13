@@ -5,6 +5,10 @@ export const ProcesoSchema = z
   .object({
     codigo: z.string().meta({ example: "9" }),
     nombre: z.string().meta({ example: "Concesion OLP" }),
+    codigoSuper: z
+      .string()
+      .nullable()
+      .meta({ description: "Código del proceso en SUPER; null si no está configurado", example: "CONCESION_OLP" }),
   })
   .meta({ id: "Proceso" });
 

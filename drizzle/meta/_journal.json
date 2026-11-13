@@ -71,6 +71,90 @@
       "when": 1793886070558,
       "tag": "0009_estado_super_en_actividades",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793975290480,
+      "tag": "0010_agregar_nombre_super_proceso_codigo",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793975298244,
+      "tag": "0011_copiar_procesos_super",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793975310683,
+      "tag": "0012_eliminar_procesos_super",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794339742892,
+      "tag": "0013_cargar_status_codes_adicionales",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794412029005,
+      "tag": "0014_agregar_debe_notificar_actividades",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794482518488,
+      "tag": "0015_renombrar_nombre_super_codigo_super",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794515043152,
+      "tag": "0016_crear_type_works_days",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794515043919,
+      "tag": "0017_cargar_type_works_days",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794515055005,
+      "tag": "0018_fk_estados_super_type_works_days",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794515570342,
+      "tag": "0019_crear_type_responsible",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794515571153,
+      "tag": "0020_cargar_type_responsible",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794515572118,
+      "tag": "0021_fk_estados_super_type_responsible",
+      "breakpoints": true
     }
   ]
 }

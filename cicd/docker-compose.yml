@@ -25,8 +25,15 @@ services:
       JOB_ZONA_HORARIA: ${JOB_ZONA_HORARIA:-America/Santiago}
       MISUPER_API_KEY: ${MISUPER_API_KEY:?Falta MISUPER_API_KEY}
       MISUPER_CHILE_ATIENDE_ID: ${MISUPER_CHILE_ATIENDE_ID:?Falta MISUPER_CHILE_ATIENDE_ID}
+      # SSO de Azure; sin ellas la API funciona, pero el login responde error
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET:-}
+      AZURE_AD_REDIRECT_URI: ${AZURE_AD_REDIRECT_URI:-http://localhost:${APP_PORT:-3000}/ms-integracion-super/api/auth/callback}
+      SESION_SECRET: ${SESION_SECRET:-}
+      SESION_DURACION_HORAS: ${SESION_DURACION_HORAS:-8}
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/openapi"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/ms-integracion-super/api/openapi"]
       interval: 10s
       timeout: 3s
       start_period: 20s

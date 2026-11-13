@@ -12,8 +12,9 @@ export interface Beneficiario {
   readonly email: string;
 }
 
+// codigoProceso es el código de procesos; el trámite que se envía a Mi Súper es su codigo_super
 export interface NuevaSolicitud {
-  readonly tramiteId: string;
+  readonly codigoProceso: string;
   readonly idSolicitudServicio: string;
   readonly beneficiario: Beneficiario;
   readonly creador: Persona;

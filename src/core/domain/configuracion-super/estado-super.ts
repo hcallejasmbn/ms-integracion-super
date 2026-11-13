@@ -1,9 +1,9 @@
-import { textoValido } from "./proceso-super";
+import { ConfiguracionSuperInvalidaError } from "./configuracion-super.errors";
 
-// Séxtupla de SUPER configurada para un proceso SUPER
+// Séxtupla de SUPER configurada para un proceso
 export interface EstadoSuper {
   readonly id: number;
-  readonly procesoSuperCodigo: string;
+  readonly procesoCodigo: string;
   readonly code: string;
   // Código interno del catálogo y su valor en SUPER, por ejemplo "1" y ENTRY
   readonly stageCode: string;
@@ -12,8 +12,12 @@ export interface EstadoSuper {
   readonly statusCode: string;
   readonly statusValue: string;
   readonly subtask: string;
+  // Código de type_works_days y su descripción
   readonly useWorkingDays: string;
+  readonly useWorkingDaysDescripcion: string;
+  // Código de type_responsible y su descripción
   readonly responsibleType: string;
+  readonly responsibleTypeDescripcion: string;
   readonly suspensionType: string | null;
 }
 
@@ -29,9 +33,9 @@ export const MAX_ESTADO_SUPER = {
   suspensionType: 10,
 } as const;
 
-// Datos para crear una séxtupla; stageCode y statusCode son los códigos internos de los catálogos
+// Datos para crear una séxtupla; stageCode, statusCode, useWorkingDays y responsibleType son códigos de sus catálogos
 export interface NuevoEstadoSuper {
-  readonly procesoSuperCodigo: string;
+  readonly procesoCodigo: string;
   readonly code: string;
   readonly stageCode: string;
   readonly status: string;
@@ -42,11 +46,14 @@ export interface NuevoEstadoSuper {
   readonly suspensionType?: string | null;
 }
 
+// Datos editables de una séxtupla existente: todo menos el proceso, que no cambia
+export type DatosEstadoSuper = Omit<NuevoEstadoSuper, "procesoCodigo">;
+
 // Los campos se guardan tal como los define SUPER: solo se valida que vengan y quepan en la columna
 export function crearNuevoEstadoSuper(datos: NuevoEstadoSuper): NuevoEstadoSuper {
   const suspensionType = datos.suspensionType?.trim();
   return {
-    procesoSuperCodigo: datos.procesoSuperCodigo,
+    procesoCodigo: datos.procesoCodigo,
     code: textoValido("code", datos.code, MAX_ESTADO_SUPER.code),
     stageCode: textoValido("stageCode", datos.stageCode, MAX_ESTADO_SUPER.stageCode),
     status: textoValido("status", datos.status, MAX_ESTADO_SUPER.status),
@@ -59,4 +66,16 @@ export function crearNuevoEstadoSuper(datos: NuevoEstadoSuper): NuevoEstadoSuper
       ? textoValido("suspensionType", suspensionType, MAX_ESTADO_SUPER.suspensionType)
       : null,
   };
+}
+
+// Recorta espacios y exige un texto no vacío dentro del largo de la columna
+function textoValido(campo: string, valor: string, maximo: number): string {
+  const texto = valor.trim();
+  if (texto.length === 0) {
+    throw new ConfiguracionSuperInvalidaError(`${campo} es obligatorio`);
+  }
+  if (texto.length > maximo) {
+    throw new ConfiguracionSuperInvalidaError(`${campo} no puede superar ${maximo} caracteres`);
+  }
+  return texto;
 }
