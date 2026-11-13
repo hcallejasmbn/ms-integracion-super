@@ -1,15 +1,88 @@
 import { relations } from "drizzle-orm";
 import { actividades } from "./actividad.entity";
+import { estadosSuper } from "./estado-super.entity";
+import { expedientesTramitando } from "./expediente-tramitando.entity";
 import { procesos } from "./proceso.entity";
+import { solicitudesSuper } from "./solicitud-super.entity";
+import { stageCodes } from "./stage-code.entity";
+import { statusCodes } from "./status-code.entity";
+import { typeResponsible } from "./type-responsible.entity";
+import { typeWorksDays } from "./type-works-days.entity";
 
 // Las relaciones van aparte para que las entidades no se importen entre sí en ambos sentidos
 export const procesosRelations = relations(procesos, ({ many }) => ({
   actividades: many(actividades),
+  estadosSuper: many(estadosSuper),
 }));
 
 export const actividadesRelations = relations(actividades, ({ one }) => ({
   proceso: one(procesos, {
     fields: [actividades.procesoCodigo],
     references: [procesos.codigo],
+  }),
+  estadoSuper: one(estadosSuper, {
+    fields: [actividades.estadoSuperId],
+    references: [estadosSuper.id],
+  }),
+}));
+
+export const estadosSuperRelations = relations(estadosSuper, ({ one }) => ({
+  // Sin fields: la FK está en actividades.estado_super_id
+  actividad: one(actividades),
+  proceso: one(procesos, {
+    fields: [estadosSuper.procesoCodigo],
+    references: [procesos.codigo],
+  }),
+  // "Info" porque stageCode, statusCode, useWorkingDays y responsibleType ya son los nombres de las columnas
+  stageCodeInfo: one(stageCodes, {
+    fields: [estadosSuper.stageCode],
+    references: [stageCodes.code],
+  }),
+  statusCodeInfo: one(statusCodes, {
+    fields: [estadosSuper.statusCode],
+    references: [statusCodes.code],
+  }),
+  useWorkingDaysInfo: one(typeWorksDays, {
+    fields: [estadosSuper.useWorkingDays],
+    references: [typeWorksDays.code],
+  }),
+  responsibleTypeInfo: one(typeResponsible, {
+    fields: [estadosSuper.responsibleType],
+    references: [typeResponsible.code],
+  }),
+}));
+
+export const stageCodesRelations = relations(stageCodes, ({ many }) => ({
+  estados: many(estadosSuper),
+}));
+
+export const statusCodesRelations = relations(statusCodes, ({ many }) => ({
+  estados: many(estadosSuper),
+}));
+
+export const typeWorksDaysRelations = relations(typeWorksDays, ({ many }) => ({
+  estados: many(estadosSuper),
+}));
+
+export const typeResponsibleRelations = relations(typeResponsible, ({ many }) => ({
+  estados: many(estadosSuper),
+}));
+
+export const solicitudesSuperRelations = relations(solicitudesSuper, ({ many }) => ({
+  expedientes: many(expedientesTramitando),
+}));
+
+export const expedientesTramitandoRelations = relations(expedientesTramitando, ({ one }) => ({
+  solicitudSuper: one(solicitudesSuper, {
+    fields: [expedientesTramitando.codigoExpediente],
+    references: [solicitudesSuper.codigoExpediente],
+  }),
+  actividad: one(actividades, {
+    fields: [expedientesTramitando.actividadId],
+    references: [actividades.id],
+  }),
+  estadoSuper: one(estadosSuper, {
+    fields: [expedientesTramitando.estadoSuperId],
+    references: [estadosSuper.id],
   }),
 }));

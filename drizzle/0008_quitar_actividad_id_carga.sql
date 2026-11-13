@@ -1,0 +1,1 @@
+ALTER TABLE "super"."carga_actividades_expedientes" DROP COLUMN "actividad_id";

@@ -1,6 +1,6 @@
-import type { Data } from "./data";
-
 export interface Creator {
-  type: string;
-  data: Data;
+  rut: string;
+  first_name: string;
+  last_name: string;
+  email: string;
 }

@@ -1,0 +1,65 @@
+# Levanta la aplicación junto a un PostgreSQL propio.
+# Se ejecuta desde la raíz del repositorio, tomando los valores del .env:
+#   docker compose -f cicd/docker-compose.yml --env-file .env up --build
+
+name: ms-integracion-super
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: cicd/Dockerfile
+    image: ms-integracion-super
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      # Apunta al servicio "db" de este compose, no al DATABASE_URL del .env (que usa localhost)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-ms_integracion_super}
+      # "true": al iniciar crea el esquema "super" y aplica las migraciones de drizzle/ antes de levantar el servidor
+      DB_MIGRAR_AL_INICIAR: ${DB_MIGRAR_AL_INICIAR:-true}
+      HOST_SUPER: ${HOST_SUPER:?Falta HOST_SUPER}
+      PATH_TOKEN_SUPER: ${PATH_TOKEN_SUPER:?Falta PATH_TOKEN_SUPER}
+      PATH_APPLICATIONS_SUPER: ${PATH_APPLICATIONS_SUPER:?Falta PATH_APPLICATIONS_SUPER}
+      JOB_NOTIFICACION_SUPER_ACTIVO: ${JOB_NOTIFICACION_SUPER_ACTIVO:-true}
+      JOB_NOTIFICACION_SUPER_CRON: ${JOB_NOTIFICACION_SUPER_CRON:-0 3 * * *}
+      JOB_ZONA_HORARIA: ${JOB_ZONA_HORARIA:-America/Santiago}
+      MISUPER_API_KEY: ${MISUPER_API_KEY:?Falta MISUPER_API_KEY}
+      MISUPER_CHILE_ATIENDE_ID: ${MISUPER_CHILE_ATIENDE_ID:?Falta MISUPER_CHILE_ATIENDE_ID}
+      # SSO de Azure; sin ellas la API funciona, pero el login responde error
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET:-}
+      AZURE_AD_REDIRECT_URI: ${AZURE_AD_REDIRECT_URI:-http://localhost:${APP_PORT:-3000}/ms-integracion-super/api/auth/callback}
+      SESION_SECRET: ${SESION_SECRET:-}
+      SESION_DURACION_HORAS: ${SESION_DURACION_HORAS:-8}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/ms-integracion-super/api/openapi"]
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ms_integracion_super}
+    ports:
+      # Puerto en tu máquina, para conectarte con un cliente SQL
+      - "${POSTGRES_PORT:-5435}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  db-data:
