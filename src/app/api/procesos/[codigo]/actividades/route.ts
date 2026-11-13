@@ -1,7 +1,8 @@
 import { ProcesoNoEncontradoError } from "@/core/domain/proceso/proceso.errors";
 import { ProcesoService } from "@/service/proceso/proceso.service";
 import type { ErrorResponse } from "../../../openapi/common.schema";
-import { ProcesoParamsSchema, type ActividadesResponse } from "./actividades.schema";
+import { ProcesoParamsSchema } from "../proceso.schema";
+import type { ActividadesResponse } from "./actividades.schema";
 
 const procesoService = new ProcesoService();
 

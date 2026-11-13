@@ -1,10 +1,3 @@
-export class ProcesoSuperNoEncontradoError extends Error {
-  constructor(codigo: string) {
-    super(`No existe el proceso SUPER ${codigo}`);
-    this.name = "ProcesoSuperNoEncontradoError";
-  }
-}
-
 export class EstadoSuperNoEncontradoError extends Error {
   constructor(id: number) {
     super(`No existe el estado SUPER ${id}`);
@@ -20,6 +13,16 @@ export class EstadoSuperYaAsignadoError extends Error {
   }
 }
 
+// Una actividad solo puede tener un estado SUPER de su mismo proceso
+export class EstadoSuperDeOtroProcesoError extends Error {
+  constructor(estadoSuperId: number, procesoEstado: string, procesoActividad: string) {
+    super(
+      `El estado SUPER ${estadoSuperId} es del proceso ${procesoEstado} y la actividad del proceso ${procesoActividad}`,
+    );
+    this.name = "EstadoSuperDeOtroProcesoError";
+  }
+}
+
 // Los datos no cumplen las reglas de la configuración (obligatorios, largos)
 export class ConfiguracionSuperInvalidaError extends Error {
   constructor(message: string) {
@@ -28,25 +31,26 @@ export class ConfiguracionSuperInvalidaError extends Error {
   }
 }
 
-export class ProcesoSuperYaExisteError extends Error {
-  constructor(codigo: string) {
-    super(`Ya existe el proceso SUPER ${codigo}`);
-    this.name = "ProcesoSuperYaExisteError";
-  }
-}
-
-// code es único dentro de cada proceso SUPER
+// code es único dentro de cada proceso
 export class EstadoSuperDuplicadoError extends Error {
-  constructor(procesoSuperCodigo: string, code: string) {
-    super(`El proceso SUPER ${procesoSuperCodigo} ya tiene un estado con code ${code}`);
+  constructor(procesoCodigo: string, code: string) {
+    super(`El proceso ${procesoCodigo} ya tiene un estado SUPER con code ${code}`);
     this.name = "EstadoSuperDuplicadoError";
   }
 }
 
-// stageCode o statusCode no están registrados en su catálogo
+// Tabla de catálogo de cada campo de estados_super que la referencia
+const CATALOGOS = {
+  stageCode: "stage_codes",
+  statusCode: "status_codes",
+  useWorkingDays: "type_works_days",
+  responsibleType: "type_responsible",
+} as const;
+
+// stageCode, statusCode, useWorkingDays o responsibleType no están registrados en su catálogo
 export class CodigoCatalogoNoEncontradoError extends Error {
-  constructor(campo: "stageCode" | "statusCode", codigo: string) {
-    super(`${campo} ${codigo} no existe en ${campo === "stageCode" ? "stage_codes" : "status_codes"}`);
+  constructor(campo: keyof typeof CATALOGOS, codigo: string) {
+    super(`${campo} ${codigo} no existe en ${CATALOGOS[campo]}`);
     this.name = "CodigoCatalogoNoEncontradoError";
   }
 }

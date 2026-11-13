@@ -1,0 +1,1 @@
+ALTER TABLE "super"."actividades" ADD COLUMN "debe_notificar" boolean DEFAULT false NOT NULL;

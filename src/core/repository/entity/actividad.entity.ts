@@ -1,4 +1,4 @@
-import { index, integer, text } from "drizzle-orm/pg-core";
+import { boolean, index, integer, text } from "drizzle-orm/pg-core";
 import { estadosSuper } from "./estado-super.entity";
 import { procesos } from "./proceso.entity";
 import { superSchema } from "./super.schema";
@@ -16,6 +16,8 @@ export const actividades = superSchema.table(
     estadoSuperId: integer("estado_super_id")
       .unique("actividades_estado_super_id_uq")
       .references(() => estadosSuper.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    // Indica si la actividad debe notificarse; las existentes y las nuevas parten en false
+    debeNotificar: boolean("debe_notificar").notNull().default(false),
   },
   (table) => [index("actividades_proceso_codigo_idx").on(table.procesoCodigo)],
 );

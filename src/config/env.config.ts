@@ -1,3 +1,5 @@
+import { BASE_PATH } from "./base-path";
+
 // Los valores se leen al usarse, no al importar el módulo, para que `next build` no falle sin variables
 export class EnvConfig {
   // Host de Mi Súper; cada endpoint se arma con HOST_SUPER + su PATH_*
@@ -44,6 +46,46 @@ export class EnvConfig {
   // Zona horaria en que se interpreta la expresión cron
   static get jobZonaHoraria(): string {
     return process.env.JOB_ZONA_HORARIA || "America/Santiago";
+  }
+
+  // SSO de Azure (Microsoft Entra ID). El tenant debe ser el id (GUID): con el dominio no coincide el issuer
+  static get azureTenantId(): string {
+    return requireEnv("AZURE_AD_TENANT_ID");
+  }
+
+  static get azureClientId(): string {
+    return requireEnv("AZURE_AD_CLIENT_ID");
+  }
+
+  static get azureClientSecret(): string {
+    return requireEnv("AZURE_AD_CLIENT_SECRET");
+  }
+
+  // Debe ser exactamente la Redirect URI registrada en Azure e incluir el basePath: http://localhost:3000/ms-integracion-super/api/auth/callback
+  static get azureRedirectUri(): string {
+    return requireEnv("AZURE_AD_REDIRECT_URI");
+  }
+
+  // Clave para cifrar la cookie de sesión; generarla con `openssl rand -base64 32`
+  static get sesionSecret(): string {
+    const secret = requireEnv("SESION_SECRET");
+    if (secret.length < 32) {
+      throw new Error("SESION_SECRET debe tener al menos 32 caracteres");
+    }
+    return secret;
+  }
+
+  static get sesionDuracionHoras(): number {
+    const horas = Number(process.env.SESION_DURACION_HORAS || 8);
+    if (!Number.isFinite(horas) || horas <= 0) {
+      throw new Error("SESION_DURACION_HORAS debe ser un número positivo");
+    }
+    return horas;
+  }
+
+  // Las cookies llevan Secure cuando la app se sirve por https (según la Redirect URI)
+  static get cookiesSeguras(): boolean {
+    return new URL(EnvConfig.azureRedirectUri).protocol === "https:";
   }
 
   static get databaseUrl(): string {

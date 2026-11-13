@@ -1,7 +1,7 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { z } from "zod";
 import { ErrorResponseSchema } from "../../../openapi/common.schema";
-import { ActividadConEstadoSuperSchema } from "../../../procesos/[codigo]/estados-super/estados-super.schema";
+import { ActividadSchema } from "../../../procesos/[codigo]/actividades/actividades.schema";
 
 export const ActividadParamsSchema = z.object({
   id: z.coerce
@@ -20,7 +20,7 @@ export const AsignarEstadoSuperSchema = z
   })
   .meta({ id: "AsignarEstadoSuper" });
 
-export type ActividadConEstadoSuperResponse = z.infer<typeof ActividadConEstadoSuperSchema>;
+export type ActividadResponse = z.infer<typeof ActividadSchema>;
 
 export function registerEstadoSuperActividadPaths(registry: OpenAPIRegistry) {
   registry.registerPath({
@@ -29,7 +29,7 @@ export function registerEstadoSuperActividadPaths(registry: OpenAPIRegistry) {
     tags: ["Procesos"],
     summary: "Asigna un estado SUPER existente a una actividad",
     description:
-      "Reemplaza el estado SUPER que tuviera la actividad. La relación es 1:1: " +
+      "Reemplaza el estado SUPER que tuviera la actividad. El estado debe ser del mismo proceso que la actividad, y la relación es 1:1: " +
       "un estado SUPER pertenece a una sola actividad. Repetir la misma asignación no falla.",
     request: {
       params: ActividadParamsSchema,
@@ -38,7 +38,7 @@ export function registerEstadoSuperActividadPaths(registry: OpenAPIRegistry) {
     responses: {
       200: {
         description: "Actividad con el estado SUPER asignado",
-        content: { "application/json": { schema: ActividadConEstadoSuperSchema } },
+        content: { "application/json": { schema: ActividadSchema } },
       },
       400: {
         description: "El id o el cuerpo no son válidos",
@@ -53,7 +53,7 @@ export function registerEstadoSuperActividadPaths(registry: OpenAPIRegistry) {
         content: { "application/json": { schema: ErrorResponseSchema } },
       },
       422: {
-        description: "El estado SUPER no existe",
+        description: "El estado SUPER no existe o es de otro proceso",
         content: { "application/json": { schema: ErrorResponseSchema } },
       },
     },
