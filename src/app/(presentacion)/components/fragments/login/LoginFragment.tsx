@@ -46,9 +46,9 @@ function LoginBody() {
                     <img
                         src={`${BASE_PATH}/assets/img/logotipo-bienes-nacionales.png`}
                         alt="Logotipo Ministerio de Bienes Nacionales"
-                        className="w-[100px] md:w-[140px]"
+                        className="w-[140px] md:w-[190px]"
                     />
-                    <h2 className="text-white font-medium text-xl md:text-2xl leading-none">
+                    <h2 className="text-white font-medium text-2xl md:text-3xl leading-none">
                         Administración integración SUPER
                     </h2>
                 </div>
