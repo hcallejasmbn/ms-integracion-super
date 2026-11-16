@@ -13,6 +13,6 @@ describe("openApiDocument", () => {
   it("documenta POST /api/super/solicitudes con sus respuestas", () => {
     const responses = openApiDocument.paths?.["/api/super/solicitudes"]?.post?.responses;
 
-    expect(Object.keys(responses ?? {})).toEqual(["201", "400", "422", "502"]);
+    expect(Object.keys(responses ?? {})).toEqual(["202", "400", "409"]);
   });
 });
