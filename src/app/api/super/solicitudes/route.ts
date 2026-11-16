@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { ProcesoNoEncontradoError, ProcesoSinCodigoSuperError } from "@/core/domain/proceso/proceso.errors";
 import { SuperService } from "@/service/super/super-service";
 import type { ErrorResponse } from "../../openapi/common.schema";
 import { NuevaSolicitudSchema, type SolicitudAceptadaResponse } from "./solicitudes.schema";
@@ -20,6 +21,19 @@ export async function POST(request: Request) {
   }
 
   const solicitud = body.data;
+  // El trámite de Mi Súper sale del proceso: sin proceso o sin codigo_super no se acepta la solicitud
+  try {
+    await superService.verificarProceso(solicitud.codigoProceso);
+  } catch (error) {
+    if (error instanceof ProcesoNoEncontradoError) {
+      return errorResponse(404, error.message);
+    }
+    if (error instanceof ProcesoSinCodigoSuperError) {
+      return errorResponse(422, error.message);
+    }
+    throw error;
+  }
+
   if (await superService.existeSolicitud(solicitud.idSolicitudServicio)) {
     return errorResponse(409, `El expediente ${solicitud.idSolicitudServicio} ya tiene una solicitud en Mi Súper`);
   }

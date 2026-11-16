@@ -1,0 +1,252 @@
+{
+  "info": {
+    "name": "ms-integracion-super",
+    "description": "Endpoints de ms-integracion-super. Toda la app se sirve bajo el basePath /ms-integracion-super, ya incluido en baseUrl.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/ms-integracion-super"
+    },
+    {
+      "key": "codigoProceso",
+      "value": "9"
+    },
+    {
+      "key": "idActividad",
+      "value": "3"
+    },
+    {
+      "key": "idEstadoSuper",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Procesos",
+      "item": [
+        {
+          "name": "Listar procesos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/procesos",
+            "description": "Procesos con su codigoSuper (null si no está configurado en SUPER). 200."
+          }
+        },
+        {
+          "name": "Actualizar código SUPER",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/procesos/{{codigoProceso}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoSuper\": \"CONCESION_OLP\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Solo actualiza codigoSuper; null o vacío lo quita. 200; 400 sin codigoSuper o más de 150 caracteres; 404 proceso no existe."
+          }
+        },
+        {
+          "name": "Listar actividades con su estado SUPER",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/procesos/{{codigoProceso}}/actividades",
+            "description": "Cada actividad trae estadoSuper (null si no informa a SUPER). 200; 404 proceso no existe."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Estados SUPER",
+      "item": [
+        {
+          "name": "Listar estados SUPER del proceso",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/procesos/{{codigoProceso}}/estados-super",
+            "description": "Séxtuplas del proceso, asignadas o no, con stageValue/statusValue. 200; 404 proceso no existe."
+          }
+        },
+        {
+          "name": "Crear estado SUPER",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/procesos/{{codigoProceso}}/estados-super",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"IWSP-1\",\n  \"stageCode\": \"1\",\n  \"status\": \"Solicitud ingresada\",\n  \"statusCode\": \"1\",\n  \"subtask\": \"Solicitud recibida\",\n  \"useWorkingDays\": \"DÍAS HÁBILES\",\n  \"responsibleType\": \"TITULAR\",\n  \"suspensionType\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea el estado sin asignarlo. stageCode/statusCode son códigos internos de los catálogos. 201; 400 datos inválidos; 404 proceso no existe; 409 code repetido en el proceso; 422 stageCode/statusCode/useWorkingDays/responsibleType fuera del catálogo."
+          }
+        },
+        {
+          "name": "Asignar estado SUPER a una actividad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/actividades/{{idActividad}}/estado-super",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estadoSuperId\": {{idEstadoSuper}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El estado debe ser del mismo proceso que la actividad (1:1). 200 con la actividad y su estadoSuper; 400; 404 actividad no existe; 409 estado ya asignado a otra actividad; 422 estado no existe o es de otro proceso."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catálogos SUPER",
+      "item": [
+        {
+          "name": "Listar stage codes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/super/stage-codes",
+            "description": "Catálogo STAGE_CODE: { code, value }. 200."
+          }
+        },
+        {
+          "name": "Listar status codes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/super/status-codes",
+            "description": "Catálogo STATUS_CODE: { code, value }. 200."
+          }
+        },
+        {
+          "name": "Listar tipos de días (USE_WORKING_DAYS)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/super/type-works-days",
+            "description": "Catálogo type_works_days: { code, descripcion }; code (DÍAS HÁBILES o DÍAS CORRIDOS) es el valor que se envía a SUPER. 200."
+          }
+        },
+        {
+          "name": "Listar tipos de responsable (RESPONSIBLE_TYPE)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/super/type-responsible",
+            "description": "Catálogo type_responsible: { code, descripcion }; code (TITULAR, ORGANO_SECTORIAL, ORGANO_INFORMANTE) es el valor que se envía a SUPER. 200."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Solicitudes",
+      "item": [
+        {
+          "name": "Crear solicitud en Mi Súper",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/super/solicitudes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoProceso\": \"{{codigoProceso}}\",\n  \"idSolicitudServicio\": \"SL12048\",\n  \"beneficiario\": {\n    \"tipo\": \"company\",\n    \"rut\": \"77762937-5\",\n    \"email\": \"contacto@constructoradelsur.cl\"\n  },\n  \"creador\": {\n    \"rut\": \"13762927-5\",\n    \"nombre\": \"Ignacio\",\n    \"apellido\": \"Perez\",\n    \"email\": \"ignacio.perez@example.cl\"\n  },\n  \"cup\": \"MTPDND55\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Asíncrono: 202 { trackId, mensaje }; el envío a Mi Súper queda en log_ejecucion por trackId. El procedure_id es el codigoSuper del proceso. 400 datos inválidos; 404 proceso no existe; 409 ya existe una solicitud para idSolicitudServicio; 422 proceso sin codigoSuper. Ojo: crea datos reales en el ambiente de Mi Súper del .env."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Autenticación (SSO Azure)",
+      "description": "login, callback y logout son redirecciones de navegador: lo normal es abrirlas en el navegador. En Postman, desactiva Settings → Automatically follow redirects para ver el 302.",
+      "item": [
+        {
+          "name": "Iniciar login",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/login?returnTo=/portal",
+            "description": "302 al login de Azure y crea la cookie ms_auth_flujo (10 min)."
+          }
+        },
+        {
+          "name": "Callback (Redirect URI)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/callback?code=&state=",
+            "description": "Lo llama Azure. Sin flujo previo redirige a /login?error=login_expirado."
+          }
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/logout",
+            "description": "Cierra solo la sesión de la app: borra ms_sesion y redirige a /login. No cierra la sesión de Microsoft."
+          }
+        },
+        {
+          "name": "Sesión actual",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/sesion",
+            "description": "200 { id, nombre, email } con una cookie ms_sesion válida; 401 sin sesión."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documentación",
+      "item": [
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/openapi"
+          }
+        },
+        {
+          "name": "Scalar UI",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/docs"
+          }
+        }
+      ]
+    }
+  ]
+}

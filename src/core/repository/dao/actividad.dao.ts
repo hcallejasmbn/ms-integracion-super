@@ -1,8 +1,8 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { getDb, type Database } from "@/config/db.config";
 import { actividades, type ActividadEntity, type NuevaActividadEntity } from "../entity/actividad.entity";
 import type { EstadoSuperEntity } from "../entity/estado-super.entity";
-import type { EstadoSuperConCatalogos } from "./estado-super.dao";
+import { CATALOGOS_ESTADO_SUPER, type EstadoSuperConCatalogos } from "./estado-super.dao";
 
 export type ActividadConEstadoSuper = ActividadEntity & { estadoSuper: EstadoSuperConCatalogos | null };
 
@@ -41,14 +41,14 @@ export class ActividadDao {
   async listarConEstadoSuperPorProceso(procesoCodigo: string): Promise<ActividadConEstadoSuper[]> {
     return this.db.query.actividades.findMany({
       where: eq(actividades.procesoCodigo, procesoCodigo),
-      with: { estadoSuper: { with: { stageCodeInfo: true, statusCodeInfo: true } } },
+      with: { estadoSuper: { with: CATALOGOS_ESTADO_SUPER } },
       orderBy: (actividades, { asc }) => [asc(actividades.id)],
     });
   }
 
-  async existe(id: number): Promise<boolean> {
-    const [fila] = await this.db.select({ id: actividades.id }).from(actividades).where(eq(actividades.id, id)).limit(1);
-    return fila !== undefined;
+  async buscar(id: number): Promise<ActividadEntity | undefined> {
+    const [actividad] = await this.db.select().from(actividades).where(eq(actividades.id, id)).limit(1);
+    return actividad;
   }
 
   // Actividad que ya tiene asignado el estado SUPER, si hay una
@@ -64,8 +64,32 @@ export class ActividadDao {
   async buscarConEstadoSuper(id: number): Promise<ActividadConEstadoSuper | undefined> {
     return this.db.query.actividades.findFirst({
       where: eq(actividades.id, id),
-      with: { estadoSuper: { with: { stageCodeInfo: true, statusCodeInfo: true } } },
+      with: { estadoSuper: { with: CATALOGOS_ESTADO_SUPER } },
     });
+  }
+
+  // El nombre es único dentro del proceso; excluirId omite la propia actividad al modificarla
+  async existeNombreEnProceso(procesoCodigo: string, nombre: string, excluirId?: number): Promise<boolean> {
+    const [fila] = await this.db
+      .select({ id: actividades.id })
+      .from(actividades)
+      .where(
+        and(
+          eq(actividades.procesoCodigo, procesoCodigo),
+          eq(actividades.nombre, nombre),
+          excluirId === undefined ? undefined : ne(actividades.id, excluirId),
+        ),
+      )
+      .limit(1);
+    return fila !== undefined;
+  }
+
+  // Cambia el nombre, el estado SUPER (null la deja sin informar a SUPER) y el flag debe_notificar
+  async actualizar(
+    id: number,
+    datos: { nombre: string; estadoSuperId: number | null; debeNotificar: boolean },
+  ): Promise<void> {
+    await this.db.update(actividades).set(datos).where(eq(actividades.id, id));
   }
 
   // Reemplaza el estado SUPER que tuviera la actividad

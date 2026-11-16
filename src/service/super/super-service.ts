@@ -5,7 +5,9 @@ import type {
   SolicitudActualizada,
   SolicitudCreada,
 } from "@/core/domain/solicitud/solicitud";
+import { ProcesoNoEncontradoError, ProcesoSinCodigoSuperError } from "@/core/domain/proceso/proceso.errors";
 import { MiSuperNoDisponibleError, SolicitudRechazadaError } from "@/core/domain/solicitud/solicitud.errors";
+import { ProcesoDao } from "@/core/repository/dao/proceso.dao";
 import { SolicitudSuperDao } from "@/core/repository/dao/solicitud-super.dao";
 import { ApiClientService, type Traza } from "./api-client-service";
 import type { ActualizarSolicitudResponse } from "./model/actualizar-solicitud-response";
@@ -17,7 +19,16 @@ export class SuperService {
   constructor(
     private readonly apiClientService = new ApiClientService(),
     private readonly solicitudSuperDao = new SolicitudSuperDao(),
+    private readonly procesoDao = new ProcesoDao(),
   ) { }
+
+  /**
+   * Comprueba que el proceso exista y tenga codigo_super, para rechazar la solicitud antes de aceptarla.
+   * crearSolicitud lo vuelve a resolver al enviarla, por si el proceso cambió entremedio.
+   */
+  async verificarProceso(codigoProceso: string): Promise<void> {
+    await this.obtenerCodigoSuper(codigoProceso);
+  }
 
   // Un expediente tiene una sola solicitud en Mi Súper
   async existeSolicitud(idSolicitudServicio: string): Promise<boolean> {
@@ -26,10 +37,12 @@ export class SuperService {
 
   /**
    * Crea la solicitud en Mi Súper y guarda la relación expediente ⇄ ms_application_id.
+   * El trámite (procedure_id) es el codigo_super del proceso de la solicitud.
    * Cada llamada HTTP queda en log_ejecucion con el trackId recibido.
    */
   async crearSolicitud(solicitud: NuevaSolicitud, trackId: string): Promise<SolicitudCreada> {
-    const crearSolicitudRequest = toCrearSolicitudRequest(solicitud);
+    const codigoSuper = await this.obtenerCodigoSuper(solicitud.codigoProceso);
+    const crearSolicitudRequest = toCrearSolicitudRequest(solicitud, codigoSuper);
     const traza: Traza = { trackId, operacion: "CREAR_SOLICITUD" };
 
     const request = await this.crearRequest(crearSolicitudRequest, traza);
@@ -61,6 +74,17 @@ export class SuperService {
     const request = await this.crearRequest(toActualizarSolicitudRequest(actualizacion), traza);
     const response = await this.enviar<ActualizarSolicitudResponse | undefined>(url.toString(), request, traza);
     return { idSolicitudMiSuper, mensaje: response?.message };
+  }
+
+  private async obtenerCodigoSuper(codigoProceso: string): Promise<string> {
+    const proceso = await this.procesoDao.buscar(codigoProceso);
+    if (!proceso) {
+      throw new ProcesoNoEncontradoError(codigoProceso);
+    }
+    if (!proceso.codigoSuper) {
+      throw new ProcesoSinCodigoSuperError(codigoProceso);
+    }
+    return proceso.codigoSuper;
   }
 
   private async crearRequest<T>(body: T, traza: Traza): Promise<RequestInit> {

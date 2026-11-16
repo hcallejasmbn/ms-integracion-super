@@ -1,10 +1,12 @@
-import { text } from "drizzle-orm/pg-core";
+import { text, varchar } from "drizzle-orm/pg-core";
 import { superSchema } from "./super.schema";
 
 export const procesos = superSchema.table("procesos", {
   // El código lo asigna quien inserta el proceso; no se autogenera
   codigo: text("codigo").primaryKey(),
   nombre: text("nombre").notNull(),
+  // Código del proceso en SUPER; null mientras el proceso no esté configurado en SUPER
+  codigoSuper: varchar("codigo_super", { length: 150 }),
 });
 
 export type ProcesoEntity = typeof procesos.$inferSelect;

@@ -1,0 +1,1 @@
+ALTER TABLE "super"."estados_super" ADD CONSTRAINT "estados_super_responsible_type_type_responsible_code_fk" FOREIGN KEY ("responsible_type") REFERENCES "super"."type_responsible"("code") ON DELETE restrict ON UPDATE cascade;

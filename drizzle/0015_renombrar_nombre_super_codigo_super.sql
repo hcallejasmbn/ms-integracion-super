@@ -1,0 +1,1 @@
+ALTER TABLE "super"."procesos" RENAME COLUMN "nombre_super" TO "codigo_super";

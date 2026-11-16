@@ -1,0 +1,1 @@
+ALTER TABLE "super"."estados_super" ADD CONSTRAINT "estados_super_use_working_days_type_works_days_code_fk" FOREIGN KEY ("use_working_days") REFERENCES "super"."type_works_days"("code") ON DELETE restrict ON UPDATE cascade;

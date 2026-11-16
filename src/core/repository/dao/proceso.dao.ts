@@ -22,6 +22,11 @@ export class ProcesoDao {
     return this.db.select().from(procesos).orderBy(asc(procesos.codigo));
   }
 
+  async buscar(codigo: string): Promise<ProcesoEntity | undefined> {
+    const [proceso] = await this.db.select().from(procesos).where(eq(procesos.codigo, codigo)).limit(1);
+    return proceso;
+  }
+
   async existe(codigo: string): Promise<boolean> {
     const [fila] = await this.db
       .select({ codigo: procesos.codigo })
@@ -29,6 +34,16 @@ export class ProcesoDao {
       .where(eq(procesos.codigo, codigo))
       .limit(1);
     return fila !== undefined;
+  }
+
+  // undefined si el proceso no existe
+  async actualizarCodigoSuper(codigo: string, codigoSuper: string | null): Promise<ProcesoEntity | undefined> {
+    const [actualizado] = await this.db
+      .update(procesos)
+      .set({ codigoSuper })
+      .where(eq(procesos.codigo, codigo))
+      .returning();
+    return actualizado;
   }
 
   async buscarPorCodigo(codigo: string): Promise<ProcesoConActividades | undefined> {

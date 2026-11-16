@@ -16,14 +16,17 @@ const PersonaSchema = z
 const BeneficiarioSchema = z
   .object({
     tipo: texto.meta({ description: "Tipo de titular", example: "company" }),
-    rut: texto.meta({ example: "77762937-5" }),
+    rut: texto.meta({ example: "72600112-K" }),
     email: z.email().meta({ example: "contacto@constructoradelsur.cl" }),
   })
   .meta({ id: "Beneficiario", description: "Titular de la solicitud (principal en Mi Súper)" });
 
 export const NuevaSolicitudSchema = z
   .object({
-    tramiteId: texto.meta({ description: "Trámite en Mi Súper", example: "55987" }),
+    codigoProceso: texto.meta({
+      description: "Código del proceso; su código SUPER es el trámite (procedure_id) que se envía a Mi Súper",
+      example: "9",
+    }),
     // Se guarda como codigo_expediente en solicitudes_super (varchar(50))
     idSolicitudServicio: texto
       .max(50)
@@ -67,8 +70,16 @@ export function registerSolicitudesPaths(registry: OpenAPIRegistry) {
         description: "El cuerpo no es JSON o no cumple el contrato",
         content: { "application/json": { schema: ErrorResponseSchema } },
       },
+      404: {
+        description: "El proceso (codigoProceso) no existe",
+        content: { "application/json": { schema: ErrorResponseSchema } },
+      },
       409: {
         description: "El expediente (idSolicitudServicio) ya tiene una solicitud en Mi Súper",
+        content: { "application/json": { schema: ErrorResponseSchema } },
+      },
+      422: {
+        description: "El proceso no tiene código SUPER configurado",
         content: { "application/json": { schema: ErrorResponseSchema } },
       },
     },

@@ -15,10 +15,11 @@ import type { Principal } from "./model/principal";
 import type { Document } from "./model/document";
 import type { Task } from "./model/task";
 
-// Traduce entre el dominio (camelCase) y el JSON de Mi Súper (snake_case)
-export function toCrearSolicitudRequest(solicitud: NuevaSolicitud): CrearSolicitudRequest {
+// Traduce entre el dominio (camelCase) y el JSON de Mi Súper (snake_case).
+// codigoSuper es el codigo_super del proceso de la solicitud: el trámite en Mi Súper
+export function toCrearSolicitudRequest(solicitud: NuevaSolicitud, codigoSuper: string): CrearSolicitudRequest {
   return {
-    procedure_id: solicitud.tramiteId,
+    procedure_id: codigoSuper,
     service_application_id: solicitud.idSolicitudServicio,
     principal: toPrincipal(solicitud.beneficiario),
     creator: toCreator(solicitud.creador),
